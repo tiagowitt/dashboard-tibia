@@ -2,3 +2,7 @@
 /*
   X-Robots-Tag: noindex, nofollow, noarchive
   Referrer-Policy: no-referrer
+
+# Dados mudam todo dia: o navegador sempre confere se há versão nova.
+/dados/*
+  Cache-Control: no-cache
