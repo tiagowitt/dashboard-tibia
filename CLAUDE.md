@@ -93,10 +93,10 @@ Limpeza final, depois que o projeto novo rodar com sucesso por alguns dias:
 ## Ordem de trabalho sugerida
 
 1. Arquivar as implantações do Apps Script (segurança, imediato).
-2. Montar o repositório: configuração, coletor, agregados, testes locais.
-3. Migrar os dados antigos para o formato mensal e validar contagens (ex.: Burtantan em 26/10/2026 = XP no dia 94.671.271; 7 dias 538.266.556; 30 dias 1.972.989.406).
-4. Workflows (diário e semanal) com `permissions` mínimas e actions em versões atuais.
-5. Dashboard.
+2. Montar o repositório: configuração, coletor, agregados, testes locais. (feito em 27/10/2026)
+3. Migrar os dados antigos para o formato mensal e validar contagens (ex.: Burtantan em 26/10/2026 = XP no dia 94.671.271; 7 dias 538.266.556; 30 dias 1.972.989.406). (feito em 27/10/2026)
+4. Workflows (diário e semanal) com `permissions` mínimas e actions em versões atuais. (feito em 27/10/2026; primeira execução agendada 28/10)
+5. Dashboard. (feito em 27/10/2026)
 6. Cloudflare Pages (feito em 27/10/2026; Access descartado).
-7. Ligar Secret scanning e Push protection no repositório novo.
+7. Ligar Secret scanning e Push protection no repositório novo. (feito em 27/10/2026: já vinham ligados; Dependabot alerts ligado pelo Tiago, security updates desligado)
 8. Limpeza final.
