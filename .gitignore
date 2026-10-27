@@ -17,6 +17,3 @@ Thumbs.db
 
 # Arquivos temporários da migração (repo antigo, export do BigQuery)
 migracao/entrada/
-
-# JSON gerados pelos agregados (decidir no passo dos workflows se entram no git)
-site/dados/
