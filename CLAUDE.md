@@ -14,10 +14,10 @@ Projeto pessoal do Tiago: coletar diariamente dados do Tibia (mundo Collabra) pe
 1. **Coleta:** GitHub Actions em Python, 1x por dia às **06:30 de Brasília = 09:30 UTC** (cron do GitHub em UTC: `30 9 * * *`; o Brasil não tem horário de verão, então não muda ao longo do ano). O GitHub pode atrasar execuções agendadas em alguns minutos. Grava com o `GITHUB_TOKEN` automático do workflow (`permissions: contents: write`), sem nenhum Secret.
 2. **Armazenamento:** arquivos Parquet no próprio repositório, **consolidados por mês** (ex.: `dados/ranking/2026-10.parquet`), com deduplicação por chave na escrita. Nada de um arquivo por dia.
 3. **Cálculo:** o mesmo workflow gera agregados prontos para o dashboard (XP diária, 7 e 30 dias, etc.), para o navegador não processar tudo.
-4. **Dashboard:** site estático (HTML/JS, DuckDB-WASM se precisar de SQL no navegador) publicado na **Cloudflare Pages**, ligado ao repositório pela integração oficial. Acesso restrito com **Cloudflare Access** (login por e-mail, plano Zero Trust grátis até 50 usuários).
+4. **Dashboard:** site estático (HTML/JS, DuckDB-WASM se precisar de SQL no navegador) publicado na **Cloudflare Pages** (`https://dashboard-tibia.pages.dev`, fluxo Pages "legacy", output `site`, sem build, `SKIP_DEPENDENCY_INSTALL=1`), ligado ao repositório pela integração oficial. **Sem restrição de acesso** (decidido em 27/10/2026): o Cloudflare Access pedia cartão mesmo no plano grátis e o Tiago não quis. O site é público mas fora dos buscadores (`robots.txt`, `_headers` com `X-Robots-Tag: noindex`, meta robots).
 5. **Sem BigQuery, sem Google Sheets, sem Apps Script.**
 
-Repositório público (Actions ilimitado; os dados já são públicos no Tibia). A restrição de acesso fica no site, via Cloudflare Access.
+Repositório público (Actions ilimitado; os dados já são públicos no Tibia e no próprio repositório, por isso uma senha no site protegeria pouco). Alternativa avaliada e não adotada: Basic Auth via Pages Function com senha em variável da Cloudflare.
 
 ## Decisões de implementação (27/10/2026)
 
@@ -97,6 +97,6 @@ Limpeza final, depois que o projeto novo rodar com sucesso por alguns dias:
 3. Migrar os dados antigos para o formato mensal e validar contagens (ex.: Burtantan em 26/10/2026 = XP no dia 94.671.271; 7 dias 538.266.556; 30 dias 1.972.989.406).
 4. Workflows (diário e semanal) com `permissions` mínimas e actions em versões atuais.
 5. Dashboard.
-6. Cloudflare Pages + Access (o Tiago faz os cliques; guiar passo a passo).
+6. Cloudflare Pages (feito em 27/10/2026; Access descartado).
 7. Ligar Secret scanning e Push protection no repositório novo.
 8. Limpeza final.
