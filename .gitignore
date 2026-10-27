@@ -1,0 +1,19 @@
+# Ambiente Python
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Editor / sistema
+.vscode/
+Thumbs.db
+.DS_Store
+
+# Nunca versionar chaves ou credenciais
+*.json.key
+*credentials*.json
+*service-account*.json
+.env
+
+# Arquivos temporários da migração (repo antigo, export do BigQuery)
+migracao/entrada/

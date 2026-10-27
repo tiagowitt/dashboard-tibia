@@ -1,0 +1,44 @@
+# Configuração única do projeto Collabra XP.
+# O coletor e os agregados leem daqui; nada disso deve ficar fixo no código.
+
+[coleta]
+mundo = "Collabra"
+guilds = ["Digit One", "Digit One Academy"]
+paginas_highscore = 20          # 50 por página = top 1000
+user_agent = "collabra-xp/1.0 (+https://github.com/tiagowitt)"
+timeout_segundos = 30
+tentativas = 5                  # retry em 429/5xx com backoff exponencial
+
+[regras]
+dias_troca_de_dono = 10         # mais que isso sem aparecer no top = nova sessão
+data_meta_anual = "12-31"       # dia/mês usado no cálculo "XP/dia até 31/12"
+
+# Faixas de level para médias da guild: "2 - 199", "200 - 299" ... "1900 - 1999", "2000+"
+[regras.faixas]
+primeira_ate = 199
+passo = 100
+ultima_a_partir = 2000
+
+# Personagens padrão da tela Análise PT (nome e meta de level)
+[[pt_padrao]]
+nome = "Burtantan"
+meta = 800
+
+[[pt_padrao]]
+nome = "Xar Lovinhu"
+meta = 800
+
+[[pt_padrao]]
+nome = "Kelvin Klein"
+meta = 900
+
+[[pt_padrao]]
+nome = "Parametro Arda"
+meta = 900
+
+[[pt_padrao]]
+nome = "Neevez Relajado"
+meta = 1000
+
+[bosses]
+categorias = ["Bane_Bosses", "Archfoe_Bosses", "Nemesis_Bosses"]

@@ -1,0 +1,9 @@
+[project]
+name = "collabra-xp"
+version = "0.1.0"
+description = "Coleta diária do Tibia (Collabra) e dashboard de XP"
+requires-python = ">=3.13"
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["testes"]
