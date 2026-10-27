@@ -84,6 +84,7 @@ Origem: repositório antigo (público), clonar com `git clone --depth 1 https://
 - No repositório antigo, um token do Apps Script ficou escrito no workflow de 19/05 a 16/09/2026 e continua visível no histórico. A chave JSON do Google (`GCP_SA_KEY`) nunca foi publicada.
 - Até 27/10/2026, a planilha **principal** (Apps Script com URL `.../AKfycbz9Br7f.../exec`) ainda aceitava o token antigo. O Tiago não usa mais essa planilha. **Prioridade:** arquivar a implantação dela (Apps Script > Implantar > Gerenciar implantações > Arquivar) e apagar a planilha.
 - A planilha "Controle PT 22h" fica sem Apps Script no novo fluxo: arquivar a implantação dela também.
+- **27/10/2026:** o Tiago arquivou as implantações do Apps Script das duas planilhas. Ainda falta apagar a planilha principal (opcional, ela não é mais usada).
 
 Limpeza final, depois que o projeto novo rodar com sucesso por alguns dias:
 1. Apagar o repositório `tiagowitt/tibia-dados-dashboard`.
@@ -92,7 +93,7 @@ Limpeza final, depois que o projeto novo rodar com sucesso por alguns dias:
 
 ## Ordem de trabalho sugerida
 
-1. Arquivar as implantações do Apps Script (segurança, imediato).
+1. Arquivar as implantações do Apps Script (segurança, imediato). (feito em 27/10/2026, nas duas planilhas)
 2. Montar o repositório: configuração, coletor, agregados, testes locais. (feito em 27/10/2026)
 3. Migrar os dados antigos para o formato mensal e validar contagens (ex.: Burtantan em 26/10/2026 = XP no dia 94.671.271; 7 dias 538.266.556; 30 dias 1.972.989.406). (feito em 27/10/2026)
 4. Workflows (diário e semanal) com `permissions` mínimas e actions em versões atuais. (feito em 27/10/2026; primeira execução agendada 28/10)
