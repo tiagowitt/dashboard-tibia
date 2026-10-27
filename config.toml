@@ -5,7 +5,7 @@
 mundo = "Collabra"
 guilds = ["Digit One", "Digit One Academy"]
 paginas_highscore = 20          # 50 por página = top 1000
-user_agent = "collabra-xp/1.0 (+https://github.com/tiagowitt)"
+user_agent = "dashboard-tibia/1.0 (+https://github.com/tiagowitt/dashboard-tibia)"
 timeout_segundos = 30
 tentativas = 5                  # retry em 429/5xx com backoff exponencial
 

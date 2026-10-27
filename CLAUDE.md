@@ -1,4 +1,4 @@
-# Collabra XP — projeto novo (substitui o tibia-dados-dashboard)
+# Collabra XP (repositório tiagowitt/dashboard-tibia) — projeto novo (substitui o tibia-dados-dashboard)
 
 Projeto pessoal do Tiago: coletar diariamente dados do Tibia (mundo Collabra) pela TibiaData API e analisá-los em um dashboard interativo. Este repositório é um recomeço do zero. O repositório antigo `tiagowitt/tibia-dados-dashboard` será apagado ao final.
 
