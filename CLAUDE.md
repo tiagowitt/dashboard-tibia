@@ -24,9 +24,10 @@ Repositório público (Actions ilimitado; os dados já são públicos no Tibia).
 - **Python 3.13** em `.venv` (criado com `py -3.13 -m venv .venv`; o `python` do PATH do Tiago é 3.11). Rodar módulos com `.venv\Scripts\python -m coletor.coletar`.
 - **pandas + pyarrow** para processamento; **config em TOML** (`config.toml`, lido com `tomllib`); **agregados em JSON pronto por tela** em `site/dados/` (sem DuckDB-WASM).
 - Parquet mensal em `dados/{ranking,kills,guild}/AAAA-MM.parquet`, particionado pelo mês de `extraction_date` (tipo date32), compressão zstd. Na regravação, chave repetida → a linha nova substitui a antiga.
-- Colunas mantêm os nomes de origem para facilitar a migração: ranking `extraction_date, rank, name, vocation, level, value`; kills `extraction_date, race, last_day_killed, last_day_players_killed, last_week_killed, last_week_players_killed`; guild `extraction_date, guild_name, rank, character_name, vocation, level, joined_date, status` (igual ao BigQuery). `world` e `type` do formato antigo foram descartados.
+- Colunas mantêm os nomes de origem para facilitar a migração: ranking `extraction_date, rank, name, vocation, level, value`; kills `extraction_date, race, last_day_killed, last_day_players_killed, last_week_killed, last_week_players_killed`; guild `extraction_date, guild_name, rank, character_name, vocation, level, joined_date, status`. `world` e `type` do formato antigo foram descartados.
 - Data de extração = data em Brasília (UTC−3 fixo, sem depender de tzdata).
-- **Migração de ranking e kills feita em 27/10/2026** (`python -m migracao.migrar_antigo`): 312 dias de 15/12/2025 a 27/10/2026, 312.000 linhas de ranking e 417.578 de kills, além do `bosses.json`. Faltam 23 a 27/12/2025 nos dois conjuntos (a regra dos 10 dias cobre). Em 11/05 e 14/05 alguns ranks se repetem porque as duplicatas vinham de dois estados do highscore; em 10/01 há um empate real de XP. Burtantan 26/10 conferido (dia, 7 e 30 dias batem). Histórico de guild ainda pendente (CSV do BigQuery).
+- **Migração de ranking e kills feita em 27/10/2026** (`python -m migracao.migrar_antigo`): 312 dias de 15/12/2025 a 27/10/2026, 312.000 linhas de ranking e 417.578 de kills, além do `bosses.json`. Faltam 23 a 27/12/2025 nos dois conjuntos (a regra dos 10 dias cobre). Em 11/05 e 14/05 alguns ranks se repetem porque as duplicatas vinham de dois estados do highscore; em 10/01 há um empate real de XP. Burtantan 26/10 conferido (dia, 7 e 30 dias batem).
+- **Histórico de guild começa em 27/10/2026** (decisão do Tiago: o histórico antigo é irrelevante e não será migrado). O primeiro dia veio de uma coleta manual às ~13h de Brasília; a partir daí é o workflow diário. Telas como "entradas e saídas em 30 dias" só ficam completas depois de 30 dias de coleta.
 - **Atenção:** o highscore da TibiaData muda ao longo do dia (não é só 1x/dia). A coleta antiga rodava sempre às ~09:01 UTC. Manter o horário fixo para os números serem comparáveis. 09:30 UTC fica depois do server save tanto no horário de verão europeu (08:00 UTC) quanto no de inverno (09:00 UTC).
 
 ## Coleta (TibiaData API v4)
@@ -70,7 +71,7 @@ Origem: repositório antigo (público), clonar com `git clone --depth 1 https://
 - `dados/kill_statistics/Collabra/*.parquet` → kills desde 15/12/2025 (`killstatistics_*` e `kill_statistics_*`).
 - `dados/bosses.json`.
 - **Descartar** as pastas dos outros 86 mundos (só têm dez/2025–jan/2026 e ninguém usa).
-- **Histórico de guild:** existe só no BigQuery, tabela `tibia-analytics.tibia_data.guild_members_history` (147 mil linhas, desde 23/01/2026; colunas guild_name, rank, character_name, vocation, level, joined_date, status, extraction_date). Exportar uma vez, por exemplo pelo console do BigQuery (Executar `SELECT *` → Salvar resultados → CSV no Google Drive ou no computador), ou com `bq` após `gcloud auth login`. Depois da migração, o BigQuery não é mais usado.
+- **Histórico de guild:** não será migrado (decidido em 27/10/2026). O histórico começa com a coleta nova. O BigQuery não é usado para nada no projeto novo.
 
 ## Segurança — situação atual e limpeza
 
