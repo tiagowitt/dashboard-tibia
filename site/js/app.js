@@ -23,7 +23,7 @@ async function navegar() {
   });
 
   destruirTodos();
-  conteudo.innerHTML = `<p class="carregando">Carregando…</p>`;
+  conteudo.innerHTML = `<div class="carregando" aria-label="Carregando"><span></span><span></span><span></span></div>`;
   try {
     const r = await dados.resumo();
     if (rotaAtual !== hash) return;  // o usuário já trocou de tela
@@ -35,12 +35,16 @@ async function navegar() {
 }
 
 async function cabecalho() {
+  const info = document.getElementById("info-data");
   try {
     const r = await dados.resumo();
-    document.getElementById("info-data").textContent =
-      `${r.mundo} · dados de ${dataBR(r.data_ref)}`;
+    info.textContent = `Dados de ${dataBR(r.data_ref)}`;
+    info.title = `${r.mundo} · dia de referência ${dataBR(r.data_ref)}`;
+    const gerado = new Date(r.gerado_em);
+    document.getElementById("rodape-gerado").textContent =
+      `Gerado em ${gerado.toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })}`;
   } catch {
-    document.getElementById("info-data").textContent = "dados indisponíveis";
+    info.textContent = "dados indisponíveis";
   }
 }
 
@@ -53,6 +57,7 @@ document.getElementById("alternar-tema").addEventListener("click", () => {
   navegar();  // redesenha os gráficos com as cores do novo tema
 });
 
-window.addEventListener("hashchange", navegar);
+window.addEventListener("hashchange", () => { navegar(); window.scrollTo({ top: 0 }); });
 cabecalho();
-navegar();
+// Os gráficos (canvas) usam a fonte disponível no momento do desenho: espera a Inter carregar.
+Promise.race([document.fonts?.ready, new Promise((ok) => setTimeout(ok, 1500))]).then(navegar);

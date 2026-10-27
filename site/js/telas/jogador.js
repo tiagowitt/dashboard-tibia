@@ -1,8 +1,8 @@
 // Tela 2 — Jogador: KPIs, gráficos de XP/level/posição, calculadora de meta e histórico.
 import * as dados from "../dados.js";
-import { barras, grafico, legendaHTML, linha, rotulosDatas } from "../graficos.js";
+import { barras, degrade, grafico, legendaHTML, linha, rotulosDatas } from "../graficos.js";
 import {
-  calcularMeta, compacto, cor, dataBR, esc, num, prefs, varRankHTML, vocHTML, NOMES_VOCACAO,
+  calcularMeta, compacto, cor, dataBR, esc, kpi, num, prefs, tituloTela, varRankHTML, vocHTML, NOMES_VOCACAO,
 } from "../util.js";
 
 const PERIODOS = [[30, "30 dias"], [90, "90 dias"], [180, "180 dias"], [9999, "Tudo"]];
@@ -13,7 +13,7 @@ export async function telaJogador(el, r, nomeRota) {
   const dias = prefs.ler("jogador.dias", 90);
 
   el.innerHTML = `
-    <form class="controles" id="j-form">
+    <form class="barra-filtros" id="j-form"><div class="controles">
       <label class="campo" style="flex:1 1 14rem">Personagem
         <input id="j-nome" list="j-nomes" value="${esc(nome)}" placeholder="Digite o nome" autocomplete="off" required>
         <datalist id="j-nomes">${nomesRecentes.map((n) => `<option value="${esc(n)}">`).join("")}</datalist>
@@ -21,8 +21,8 @@ export async function telaJogador(el, r, nomeRota) {
       <label class="campo">Período
         <select id="j-dias">${PERIODOS.map(([d, t]) => `<option value="${d}" ${d === dias ? "selected" : ""}>${t}</option>`).join("")}</select>
       </label>
-      <button class="primario" type="submit">Ver</button>
-    </form>
+      <button class="primario" type="submit">Ver jogador</button>
+    </div></form>
     <div id="j-corpo"></div>`;
 
   const $ = (s) => el.querySelector(s);
@@ -36,11 +36,11 @@ export async function telaJogador(el, r, nomeRota) {
   async function desenhar() {
     const corpo = $("#j-corpo");
     if (!nome) {
-      corpo.innerHTML = `<p class="muted">Escolha um personagem para ver o histórico.</p>`;
+      corpo.innerHTML = tituloTela("Jogador", "Escolha um personagem acima para ver evolução, metas e histórico.");
       return;
     }
     const diasSel = +$("#j-dias").value;
-    corpo.innerHTML = `<p class="carregando">Carregando histórico…</p>`;
+    corpo.innerHTML = `<div class="carregando"><span></span><span></span></div>`;
     const linhas = (await dados.variosMeses(dados.mesesDosUltimosDias(r, diasSel)))
       .filter((l) => l.nome.toLowerCase() === nome.toLowerCase());
     const inicio = new Date(r.data_ref + "T00:00:00Z");
@@ -67,25 +67,30 @@ function desenharJogador(corpo, r, hist) {
   const metaSalva = prefs.ler(`meta.${atual.nome}`, metaPadrao);
 
   corpo.innerHTML = `
-    <h2 style="font-size:1.25rem;margin-bottom:.25rem">${esc(atual.nome)}</h2>
-    <p class="muted" style="margin:0 0 1rem">${vocHTML(atual.voc)} ${NOMES_VOCACAO[atual.voc] ?? ""}
-      ${guild ? ` · ${esc(guild)}` : ""} · último registro em ${dataBR(atual.data)}</p>
+    <div class="perfil">
+      <div class="avatar" style="--cor:var(--voc-${atual.voc}, var(--texto-3))" aria-hidden="true">${esc(atual.nome[0])}</div>
+      <div>
+        <h1>${esc(atual.nome)}</h1>
+        <p>${vocHTML(atual.voc)} <span>${NOMES_VOCACAO[atual.voc] ?? ""}</span>
+          ${guild ? `<span>· ${esc(guild)}</span>` : ""}<span>· último registro em ${dataBR(atual.data)}</span></p>
+      </div>
+    </div>
     ${foraDoTop ? `<div class="aviso">Fora do top 1000 desde ${dataBR(atual.data)}; os números abaixo são do último dia em que apareceu.</div>` : ""}
     <div class="kpis">
       ${kpi("Level", atual.level, `${atual.lv_30 >= 0 ? "+" : ""}${atual.lv_30} em 30 dias`)}
       ${kpi("XP no dia", compacto(atual.xp_dia), num(atual.xp_dia))}
       ${kpi("XP 7 dias", compacto(atual.xp_7), num(atual.xp_7))}
-      ${kpi("XP 30 dias", compacto(atual.xp_30), num(atual.xp_30))}
+      ${kpi("XP 30 dias", compacto(atual.xp_30), num(atual.xp_30), true)}
       ${kpi("Média diária (30d)", compacto(atual.xp_30 / 30), num(Math.round(atual.xp_30 / 30)))}
       ${kpi("Rank no highscore", atual.rank, varRankHTML(atual.var_rank))}
     </div>
 
-    <div class="cartao" style="margin-top:1rem">
+    <div class="cartao">
       <h2>XP por dia</h2>
       <div id="j-leg-xp"></div>
       <div class="grafico" id="j-g-xp"></div>
     </div>
-    <div class="grade-2" style="margin-bottom:1rem">
+    <div class="grade-2">
       <div class="cartao"><h2>Level</h2><div class="grafico" id="j-g-level"></div></div>
       <div class="cartao"><h2>Posição no highscore</h2><div class="grafico" id="j-g-rank"></div></div>
     </div>
@@ -95,7 +100,7 @@ function desenharJogador(corpo, r, hist) {
       <div class="controles">
         <label class="campo">Level meta <input type="number" id="j-meta" min="${atual.level + 1}" max="5000" value="${metaSalva}"></label>
       </div>
-      <div class="kpis" id="j-meta-res"></div>
+      <div class="kpis" id="j-meta-res" style="margin-bottom:0"></div>
     </div>
 
     <div class="cartao">
@@ -135,15 +140,13 @@ function desenharJogador(corpo, r, hist) {
     ],
   });
   grafico(corpo.querySelector("#j-g-level"), "line", {
-    labels: rotulos, datasets: [linha("Level", hist.map((l) => l.level), cor("--s1"), { tension: 0 })],
+    labels: rotulos, datasets: [linha("Level", hist.map((l) => l.level), cor("--s1"),
+      { tension: 0.2, fill: "origin", backgroundColor: degrade(cor("--s1")) })],
   }, { scales: { y: { ticks: { callback: (v) => num(v) } } } });
   grafico(corpo.querySelector("#j-g-rank"), "line", {
-    labels: rotulos, datasets: [linha("Rank", hist.map((l) => l.rank), cor("--s1"), { tension: 0 })],
+    labels: rotulos, datasets: [linha("Rank", hist.map((l) => l.rank), cor("--s7"),
+      { tension: 0.2, fill: "end", backgroundColor: degrade(cor("--s7")) })],
   }, { scales: { y: { reverse: true, ticks: { callback: (v) => num(v) } } } });
-}
-
-function kpi(rotulo, valor, detalhe = "") {
-  return `<div class="kpi"><div class="rotulo">${rotulo}</div><div class="valor">${valor}</div><div class="detalhe">${detalhe}</div></div>`;
 }
 
 function tabelaHistorico(hist) {

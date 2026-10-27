@@ -2,7 +2,7 @@
 import * as dados from "../dados.js";
 import { grafico, legendaHTML, linha, rotulosDatas } from "../graficos.js";
 import {
-  calcularMeta, compacto, corSerie, dataBR, esc, faixaDoLevel, linkJogador, num, pct, prefs, vocHTML, xpDoLevel,
+  calcularMeta, compacto, corSerie, dataBR, esc, faixaDoLevel, linkJogador, num, pct, prefs, tituloTela, vocHTML, xpDoLevel,
 } from "../util.js";
 
 const MAXIMO = 7;
@@ -13,12 +13,13 @@ export async function telaPT(el, r) {
   const nomes = [...new Set(ultimoMes.map((l) => l.nome))].sort();
 
   el.innerHTML = `
+    ${tituloTela("Análise da PT", "Compare o ritmo de cada personagem, a média da guild e o caminho até a meta")}
     <div class="cartao">
-      <h2>Personagens da PT <span class="muted">(até ${MAXIMO})</span></h2>
+      <div class="cartao-cab"><h2>Personagens</h2><span class="muted">até ${MAXIMO}, com a meta de level de cada um</span></div>
       <form id="pt-form">
         <div class="pt-linhas" id="pt-linhas"></div>
         <datalist id="pt-nomes">${nomes.map((n) => `<option value="${esc(n)}">`).join("")}</datalist>
-        <div class="controles" style="margin:.75rem 0 0">
+        <div class="controles" style="margin:1rem 0 0">
           <button type="button" id="pt-add">+ Adicionar</button>
           <button type="button" id="pt-padrao">Restaurar padrão</button>
           <button type="submit" class="primario">Atualizar análise</button>
@@ -32,10 +33,9 @@ export async function telaPT(el, r) {
   function desenharEditor() {
     $("#pt-linhas").innerHTML = lista.map((p, i) => `
       <div class="pt-linha">
+        <span class="ponto" style="--cor:${corSerie(i)}"></span>
         <input list="pt-nomes" name="nome" value="${esc(p.nome)}" placeholder="Personagem" aria-label="Personagem ${i + 1}" autocomplete="off">
-        <label class="campo" style="flex-direction:row;align-items:center;gap:.4rem">Meta
-          <input type="number" name="meta" value="${p.meta}" min="2" max="5000" aria-label="Meta de level ${i + 1}">
-        </label>
+        <input type="number" name="meta" value="${p.meta}" min="2" max="5000" title="Meta de level" aria-label="Meta de level ${i + 1}">
         <button type="button" data-remover="${i}" aria-label="Remover ${esc(p.nome)}">✕</button>
       </div>`).join("");
     $("#pt-add").disabled = lista.length >= MAXIMO;
@@ -94,7 +94,7 @@ function desenharAnalise(corpo, r, membros) {
     ${ausentes.length ? `<div class="aviso">Fora do top 1000 nos últimos 30 dias: ${ausentes.map((m) => esc(m.nome)).join(", ")}.</div>` : ""}
     ${presentes.length ? `
     <div class="cartao">
-      <h2>Comparativo em ${dataBR(r.data_ref)}</h2>
+      <div class="cartao-cab"><h2>Comparativo</h2><span class="muted">${dataBR(r.data_ref)}</span></div>
       <div class="tabela-rolagem">${tabelaComparativa(presentes, r)}</div>
       <p class="muted" style="margin:.5rem 0 0">“vs guild” compara a XP 30 dias com a média dos membros da mesma guild e faixa de level que estão no top 1000.</p>
     </div>
@@ -104,7 +104,7 @@ function desenharAnalise(corpo, r, membros) {
       <div class="grafico alto" id="pt-grafico"></div>
     </div>
     <div class="cartao">
-      <h2>XP/dia necessária até ${dataBR(fimAno)}, por level</h2>
+      <div class="cartao-cab"><h2>XP/dia necessária até ${dataBR(fimAno)}</h2><span class="muted">por level alvo</span></div>
       <div class="tabela-rolagem">${tabelaPorLevel(presentes, r)}</div>
     </div>` : `<p class="muted">Adicione personagens para ver a análise.</p>`}`;
 

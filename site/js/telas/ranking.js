@@ -1,8 +1,11 @@
 // Tela 1 — Ranking XP: top por XP no dia / 7 / 30 dias, com data, busca e filtros.
 import * as dados from "../dados.js";
-import { compacto, dataBR, esc, linkJogador, num, prefs, varRankHTML, vocHTML, VOCACOES } from "../util.js";
+import {
+  compacto, dataBR, esc, kpi, linkJogador, num, posicaoHTML, prefs, tituloTela, varRankHTML, vocHTML, VOCACOES,
+} from "../util.js";
 
 const PERIODOS = { xp_dia: "Dia", xp_7: "7 dias", xp_30: "30 dias" };
+const DESCRICAO = { xp_dia: "no dia", xp_7: "nos últimos 7 dias", xp_30: "nos últimos 30 dias" };
 const POR_PAGINA = 100;
 
 export async function telaRanking(el, r) {
@@ -16,30 +19,34 @@ export async function telaRanking(el, r) {
   };
 
   el.innerHTML = `
-    <div class="controles">
-      <label class="campo">Data
-        <select id="r-data">${[...r.datas].reverse().map((d) =>
-          `<option value="${d}">${dataBR(d)}</option>`).join("")}</select>
-      </label>
-      <div class="campo">Período
-        <div class="segmentado" id="r-periodo">${Object.entries(PERIODOS).map(([k, v]) =>
-          `<button type="button" data-p="${k}">${v}</button>`).join("")}</div>
+    ${tituloTela("Ranking de XP", `Quem mais upou entre o top 1000 de ${esc(r.mundo)}`)}
+    <div class="barra-filtros">
+      <div class="controles">
+        <label class="campo">Data
+          <select id="r-data">${[...r.datas].reverse().map((d) =>
+            `<option value="${d}">${dataBR(d)}</option>`).join("")}</select>
+        </label>
+        <div class="campo">Período
+          <div class="segmentado" id="r-periodo">${Object.entries(PERIODOS).map(([k, v]) =>
+            `<button type="button" data-p="${k}">${v}</button>`).join("")}</div>
+        </div>
+        <label class="campo">Guild
+          <select id="r-guild">
+            <option value="">Todas</option>
+            ${r.guilds.map((g) => `<option>${esc(g)}</option>`).join("")}
+            <option value="*">Só membros das guilds</option>
+          </select>
+        </label>
+        <label class="campo" style="flex:1 1 14rem">Buscar
+          <input id="r-busca" type="search" placeholder="Nome do personagem" autocomplete="off">
+        </label>
       </div>
-      <label class="campo">Guild
-        <select id="r-guild">
-          <option value="">Todas</option>
-          ${r.guilds.map((g) => `<option>${esc(g)}</option>`).join("")}
-          <option value="*">Só membros das guilds</option>
-        </select>
-      </label>
-      <label class="campo" style="flex:1 1 12rem">Buscar
-        <input id="r-busca" type="search" placeholder="Nome do personagem" autocomplete="off">
-      </label>
+      <div class="controles"><div class="chips" id="r-vocs" aria-label="Filtrar por vocação">${VOCACOES.map((v) =>
+        `<button type="button" class="chip" data-v="${v}">${vocHTML(v)}</button>`).join("")}</div></div>
     </div>
-    <div class="controles"><div class="chips" id="r-vocs">${VOCACOES.map((v) =>
-      `<button type="button" class="chip" data-v="${v}">${vocHTML(v)}</button>`).join("")}</div></div>
+    <div class="kpis" id="r-kpis"></div>
     <div class="cartao">
-      <h2 id="r-titulo"></h2>
+      <div class="cartao-cab"><h2 id="r-titulo"></h2><span class="muted" id="r-contagem"></span></div>
       <div class="tabela-rolagem" id="r-tabela"></div>
     </div>`;
 
@@ -59,9 +66,22 @@ export async function telaRanking(el, r) {
     else if (estado.guild) linhas = linhas.filter((l) => r.guild_de[l.nome] === estado.guild);
     linhas.sort((a, b) => b[p] - a[p] || a.rank - b.rank);
     linhas.forEach((l, i) => (l._pos = i + 1));  // posição por XP antes da busca
+
+    // Indicadores do recorte (antes da busca por nome)
+    const upando = linhas.filter((l) => l[p] > 0);
+    const total = upando.reduce((s, l) => s + l[p], 0);
+    const lider = linhas[0];
+    $("#r-kpis").innerHTML = linhas.length ? [
+      kpi("Maior ganho", compacto(lider[p]), esc(lider.nome), true),
+      kpi("XP somada", compacto(total), `${DESCRICAO[p]}, no recorte`),
+      kpi("Upando", num(upando.length), `de ${num(linhas.length)} personagens`),
+      kpi("Média de quem upou", upando.length ? compacto(total / upando.length) : "—", "por personagem"),
+    ].join("") : "";
+
     if (busca) linhas = linhas.filter((l) => l.nome.toLowerCase().includes(busca));
 
-    $("#r-titulo").textContent = `XP ganha — ${PERIODOS[p].toLowerCase()} até ${dataBR(estado.data)}`;
+    $("#r-titulo").textContent = `XP ganha ${DESCRICAO[p]} · ${dataBR(estado.data)}`;
+    $("#r-contagem").textContent = linhas.length ? `${num(linhas.length)} personagens` : "";
     if (!linhas.length) {
       $("#r-tabela").innerHTML = `<p class="vazio">Nenhum personagem encontrado.</p>`;
       return;
@@ -70,17 +90,17 @@ export async function telaRanking(el, r) {
     $("#r-tabela").innerHTML = `
       <table>
         <thead><tr>
-          <th>#</th><th>Personagem</th><th>Voc.</th><th class="num">Level</th>
+          <th class="num">#</th><th>Personagem</th><th>Vocação</th><th class="num">Level</th>
           <th class="num">XP ${PERIODOS[p].toLowerCase()}</th><th class="num">Rank HS</th><th class="num">Variação</th>
-          <th>Guild</th>
+          <th>Guild atual</th>
         </tr></thead>
         <tbody>${visiveis.map((l) => `
           <tr>
-            <td class="pos num">${l._pos}</td>
+            <td class="pos num">${posicaoHTML(l._pos)}</td>
             <td>${linkJogador(l.nome)}</td>
             <td>${vocHTML(l.voc)}</td>
             <td class="num">${l.level}</td>
-            <td class="num" title="${num(l[p])}">${compacto(l[p])}</td>
+            <td class="num" title="${num(l[p])}"><strong>${compacto(l[p])}</strong></td>
             <td class="num">${l.rank}</td>
             <td class="num">${varRankHTML(l.var_rank)}</td>
             <td class="muted">${esc(r.guild_de[l.nome] || "")}</td>
@@ -88,8 +108,8 @@ export async function telaRanking(el, r) {
         </tbody>
       </table>
       ${linhas.length > estado.limite
-        ? `<p style="text-align:center"><button type="button" id="r-mais">Mostrar mais (${linhas.length - estado.limite} restantes)</button></p>`
-        : `<p class="muted" style="text-align:center">${linhas.length} personagens</p>`}`;
+        ? `<p style="text-align:center;margin:1rem 0 0"><button type="button" id="r-mais">Mostrar mais (${num(linhas.length - estado.limite)} restantes)</button></p>`
+        : ""}`;
     $("#r-mais")?.addEventListener("click", () => { estado.limite += POR_PAGINA; desenhar(); });
   }
 

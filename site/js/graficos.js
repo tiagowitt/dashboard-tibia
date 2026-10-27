@@ -4,6 +4,9 @@ import { compacto, cor, dataCurta, num } from "./util.js";
 const Chart = window.Chart;
 const ativos = new Set();
 
+Chart.defaults.font.family = getComputedStyle(document.body).fontFamily;
+Chart.defaults.font.size = 12;
+
 function base() {
   return {
     responsive: true,
@@ -16,10 +19,12 @@ function base() {
         backgroundColor: cor("--superficie"),
         titleColor: cor("--texto"),
         bodyColor: cor("--texto-2"),
-        borderColor: cor("--eixo"),
+        borderColor: cor("--borda-forte"),
         borderWidth: 1,
-        padding: 10,
-        boxPadding: 4,
+        cornerRadius: 10,
+        padding: { x: 12, y: 10 },
+        boxPadding: 5,
+        titleFont: { weight: "600" },
         usePointStyle: true,
         callbacks: {
           label: (c) => ` ${c.dataset.label}: ${num(Math.round(c.parsed.y ?? c.parsed.x))}`,
@@ -63,6 +68,24 @@ export function grafico(el, tipo, data, opcoes) {
 export function destruirTodos() {
   for (const g of ativos) g.destroy();
   ativos.clear();
+}
+
+/** Converte #rrggbb em rgba com transparência. */
+function comAlfa(hex, alfa) {
+  const n = parseInt(hex.replace("#", ""), 16);
+  return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${alfa})`;
+}
+
+/** Preenchimento em degradê sob uma linha (da cor da série até transparente). */
+export function degrade(corSerie) {
+  return (ctx) => {
+    const area = ctx.chart.chartArea;
+    if (!area) return comAlfa(corSerie, 0.1);
+    const g = ctx.chart.ctx.createLinearGradient(0, area.top, 0, area.bottom);
+    g.addColorStop(0, comAlfa(corSerie, 0.22));
+    g.addColorStop(1, comAlfa(corSerie, 0));
+    return g;
+  };
 }
 
 /** Estilos de marca padronizados. */

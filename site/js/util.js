@@ -78,8 +78,29 @@ export function vocHTML(sigla) {
 
 export function varRankHTML(v) {
   if (v == null) return `<span class="muted">novo</span>`;
-  if (v === 0) return `<span class="muted">=</span>`;
-  return v > 0 ? `<span class="sobe">▲ ${v}</span>` : `<span class="desce">▼ ${-v}</span>`;
+  if (v === 0) return `<span class="muted">—</span>`;
+  return v > 0 ? `<span class="var sobe">▲ ${v}</span>` : `<span class="var desce">▼ ${-v}</span>`;
+}
+
+/** Posição com medalha para o top 3. */
+export function posicaoHTML(pos) {
+  return pos <= 3 ? `<span class="medalha medalha-${pos}">${pos}</span>` : String(pos);
+}
+
+export function tituloTela(titulo, subtitulo = "") {
+  return `<div class="titulo-tela"><h1>${titulo}</h1>${subtitulo ? `<p>${subtitulo}</p>` : ""}</div>`;
+}
+
+export function kpi(rotulo, valor, detalhe = "", destaque = false) {
+  return `<div class="kpi${destaque ? " destaque" : ""}"><div class="rotulo">${rotulo}</div>` +
+    `<div class="valor">${valor}</div><div class="detalhe">${detalhe}</div></div>`;
+}
+
+/** Linha de tabela de top com barra proporcional. */
+export function barraHTML(valor, maximo) {
+  const largura = maximo > 0 ? Math.max(2, (valor / maximo) * 100) : 0;
+  return `<div class="barra-celula"><span class="trilha"><span style="width:${largura}%"></span></span>` +
+    `<span class="num">${fmtInteiro.format(valor)}</span></div>`;
 }
 
 export function linkJogador(nome) {

@@ -2,7 +2,7 @@
 import * as dados from "../dados.js";
 import { barras, grafico, legendaHTML, linha, rotulosDatas } from "../graficos.js";
 import {
-  compacto, cor, corSerie, corVocacao, dataBR, esc, linkJogador, num, prefs, vocHTML, VOCACOES, NOMES_VOCACAO,
+  barraHTML, compacto, cor, corSerie, corVocacao, dataBR, esc, kpi, linkJogador, num, prefs, tituloTela, vocHTML, VOCACOES, NOMES_VOCACAO,
 } from "../util.js";
 
 export async function telaGuild(el, r) {
@@ -11,18 +11,19 @@ export async function telaGuild(el, r) {
   const estado = { guild: prefs.ler("guild.sel", ""), periodo: prefs.ler("kills.periodo", "7") };
 
   el.innerHTML = `
-    <div class="controles">
+    ${tituloTela("Guild & Kills", `Membros de ${r.guilds.map(esc).join(" e ")} e as estatísticas de mortes do mundo`)}
+    <div class="barra-filtros"><div class="controles">
       <div class="campo">Guild
         <div class="segmentado" id="g-sel">
           <button type="button" data-g="">Ambas</button>
           ${r.guilds.map((n) => `<button type="button" data-g="${esc(n)}">${esc(n)}</button>`).join("")}
         </div>
       </div>
-    </div>
+    </div></div>
     ${g.inicio_historico === g.data ? `<div class="aviso">O histórico de guild começou em ${dataBR(g.inicio_historico)}. Membros por dia e saídas ficam completos conforme a coleta diária acumula dias.</div>` : ""}
     <div id="g-corpo"></div>
 
-    <h2 style="margin-top:1.5rem;font-size:1.2rem">Kill statistics</h2>
+    <h2 class="secao">Kill statistics</h2>
     <div class="controles">
       <div class="campo">Período
         <div class="segmentado" id="k-periodo">
@@ -54,13 +55,13 @@ export async function telaGuild(el, r) {
     const guildsVisiveis = sel ? [sel] : r.guilds;
 
     $("#g-corpo").innerHTML = `
-      <div class="kpis" style="margin-bottom:1rem">
-        ${kpi("Membros", num(ms.length), `em ${dataBR(g.data)}`)}
+      <div class="kpis">
+        ${kpi("Membros", num(ms.length), `em ${dataBR(g.data)}`, true)}
         ${kpi("No top 1000", num(noTop), ms.length ? `${Math.round((noTop / ms.length) * 100)}% dos membros` : "")}
         ${kpi("Entradas (30 dias)", num(entradas.length), "pela data de entrada")}
         ${kpi("Saídas (30 dias)", num(saidas.length), `desde ${dataBR(g.inicio_historico)}`)}
       </div>
-      <div class="grade-2" style="margin-bottom:1rem">
+      <div class="grade-2">
         <div class="cartao">
           <h2>Composição por faixa e vocação</h2>
           <div id="g-leg-comp"></div>
@@ -78,7 +79,7 @@ export async function telaGuild(el, r) {
         <div id="g-leg-dia"></div>
         <div class="grafico" id="g-dia"></div>
       </div>
-      <div class="grade-2" style="margin-bottom:1rem">
+      <div class="grade-2">
         <div class="cartao"><h2>Entradas nos últimos 30 dias</h2>
           <div class="tabela-rolagem" style="max-height:360px">${tabelaPessoas(entradas, "data", "Entrou", !sel)}</div></div>
         <div class="cartao"><h2>Saídas nos últimos 30 dias</h2>
@@ -150,11 +151,11 @@ export async function telaGuild(el, r) {
     const nemesis = dados.tabela(k.nemesis_historico).slice(0, 40);
 
     $("#k-corpo").innerHTML = `
-      <div class="grade-2" style="margin-bottom:1rem">
-        <div class="cartao"><h2>Criaturas mais mortas</h2>${listaTop(k.criaturas[p].slice(0, 20), "Criatura", "Mortas")}</div>
-        <div class="cartao"><h2>Quem mais matou jogadores</h2>${listaTop(k.matadores[p].slice(0, 20), "Criatura", "Jogadores mortos")}</div>
+      <div class="grade-2">
+        <div class="cartao"><h2>Criaturas mais mortas</h2>${listaTop(k.criaturas[p].slice(0, 20), "Criatura", "Mortas", true)}</div>
+        <div class="cartao"><h2>Quem mais matou jogadores</h2>${listaTop(k.matadores[p].slice(0, 20), "Criatura", "Jogadores mortos", true)}</div>
       </div>
-      <div class="grade-2" style="margin-bottom:1rem">
+      <div class="grade-2">
         ${["Nemesis", "Archfoe", "Bane"].map((t) => {
           const lista = bosses.filter((b) => b.tipo === t);
           return `<div class="cartao"><h2>Bosses ${t} <span class="muted">(${lista.length} diferentes)</span></h2>
@@ -178,16 +179,13 @@ function rotuloCategoria(valor) {
   return this.getLabelForValue(valor);
 }
 
-function kpi(rotulo, valor, detalhe = "") {
-  return `<div class="kpi"><div class="rotulo">${rotulo}</div><div class="valor">${valor}</div><div class="detalhe">${detalhe}</div></div>`;
-}
-
-function listaTop(itens, rotNome, rotValor) {
+// Nomes de criaturas vêm em minúsculas da API; os de bosses já vêm formatados.
+function listaTop(itens, rotNome, rotValor, capitalizar = false) {
   if (!itens.length) return `<p class="vazio">Nenhum registro no período.</p>`;
   const maximo = Math.max(...itens.map(([, v]) => v));
-  return `<table><thead><tr><th>#</th><th>${rotNome}</th><th>${rotValor}</th></tr></thead><tbody>
-    ${itens.map(([nome, v], i) => `<tr><td class="pos num">${i + 1}</td><td>${esc(nome)}</td>
-      <td><div class="barra-celula"><span class="b" style="width:${Math.max(2, (v / maximo) * 100) * 0.6}%"></span><span class="num">${num(v)}</span></div></td></tr>`).join("")}
+  return `<table><thead><tr><th class="num">#</th><th>${rotNome}</th><th>${rotValor}</th></tr></thead><tbody>
+    ${itens.map(([nome, v], i) => `<tr><td class="pos num">${i + 1}</td><td${capitalizar ? ' class="capitalizar"' : ""}>${esc(nome)}</td>
+      <td style="width:45%">${barraHTML(v, maximo)}</td></tr>`).join("")}
   </tbody></table>`;
 }
 
