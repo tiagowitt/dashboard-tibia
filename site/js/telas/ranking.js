@@ -1,7 +1,7 @@
 // Tela 1 — Ranking XP: top por XP no dia / 7 / 30 dias, com data, busca e filtros.
 import * as dados from "../dados.js";
 import {
-  compacto, dataBR, esc, kpi, linkJogador, num, posicaoHTML, prefs, tituloTela, varRankHTML, vocHTML, VOCACOES,
+  compacto, dataBR, esc, kpi, linkJogador, num, posicaoHTML, prefs, tituloTela, vocHTML, VOCACOES,
 } from "../util.js";
 
 const PERIODOS = { xp_dia: "Dia", xp_7: "7 dias", xp_30: "30 dias" };
@@ -91,8 +91,7 @@ export async function telaRanking(el, r) {
       <table>
         <thead><tr>
           <th class="num">#</th><th>Personagem</th><th>Vocação</th><th class="num">Level</th>
-          <th class="num">XP ${PERIODOS[p].toLowerCase()}</th><th class="num">Rank HS</th><th class="num">Variação</th>
-          <th>Guild atual</th>
+          <th class="num">XP ${PERIODOS[p].toLowerCase()}</th>
         </tr></thead>
         <tbody>${visiveis.map((l) => `
           <tr>
@@ -101,9 +100,6 @@ export async function telaRanking(el, r) {
             <td>${vocHTML(l.voc)}</td>
             <td class="num">${l.level}</td>
             <td class="num" title="${num(l[p])}"><strong>${compacto(l[p])}</strong></td>
-            <td class="num">${l.rank}</td>
-            <td class="num">${varRankHTML(l.var_rank)}</td>
-            <td class="muted">${esc(r.guild_de[l.nome] || "")}</td>
           </tr>`).join("")}
         </tbody>
       </table>
