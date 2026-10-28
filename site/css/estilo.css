@@ -235,7 +235,7 @@ th {
   position: sticky; top: 0; background: var(--superficie); z-index: 1;
 }
 th .muted { text-transform: none; letter-spacing: normal; font-weight: 400; }
-th.num, td.num { text-align: right; }
+th.num, td.num, th.centro, td.centro { text-align: center; }
 td.capitalizar { text-transform: capitalize; }
 tbody tr { transition: background .12s; }
 tbody tr:hover { background: var(--superficie-2); }
@@ -273,7 +273,7 @@ td.pos { color: var(--texto-3); width: 2.75rem; }
 .ponto-serie { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--cor); margin-right: .4rem; vertical-align: middle; }
 
 /* Tabela "levels possíveis até o fim do ano": três situações por célula */
-.tabela-nv td.nv { text-align: right; font-variant-numeric: tabular-nums; border-left: 3px solid var(--superficie); }
+.tabela-nv td.nv { text-align: center; font-variant-numeric: tabular-nums; border-left: 3px solid var(--superficie); }
 .nv-ok { color: var(--texto-2); background: color-mix(in srgb, var(--destaque) 12%, var(--superficie)); }
 .nv-sim { color: var(--sobe); font-weight: 650; background: color-mix(in srgb, var(--sobe) 13%, var(--superficie)); }
 .nv-nao { color: var(--texto-2); background: color-mix(in srgb, var(--desce) 9%, var(--superficie)); }

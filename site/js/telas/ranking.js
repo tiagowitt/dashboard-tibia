@@ -110,16 +110,16 @@ export async function telaRanking(el, r) {
     $("#r-tabela").innerHTML = `
       <table>
         <thead><tr>
-          <th class="num">#</th><th>Personagem</th><th>Vocação</th><th class="num">Level</th>
+          <th class="num">#</th><th>Personagem</th><th class="centro">Vocação</th><th class="num">Level</th>
           <th class="num">XP ${PERIODOS[p].toLowerCase()}</th><th class="num">${ROTULO_VARIACAO[p]}</th>
         </tr></thead>
         <tbody>${visiveis.map((l) => `
           <tr>
             <td class="pos num">${posicaoHTML(l._pos)}</td>
             <td>${linkJogador(l.nome)}</td>
-            <td>${vocHTML(l.voc)}</td>
+            <td class="centro">${vocHTML(l.voc)}</td>
             <td class="num">${l.level}</td>
-            <td class="num" title="${num(l[p])}"><strong>${compacto(l[p])}</strong></td>
+            <td class="num"><strong>${num(l[p])}</strong></td>
             <td class="num">${variacaoHTML(l[p], antes.get(l.nome))}</td>
           </tr>`).join("")}
         </tbody>

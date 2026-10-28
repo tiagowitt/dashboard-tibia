@@ -2,7 +2,7 @@
 import * as dados from "../dados.js";
 import { grafico, legendaHTML, linha, rotulosDatas } from "../graficos.js";
 import {
-  calcularMeta, compacto, corSerie, dataBR, dataCurta, esc, faixaDoLevel, levelDaXp, linkJogador, num, prazoAnual, prefs,
+  calcularMeta, corSerie, dataBR, dataCurta, esc, faixaDoLevel, levelDaXp, linkJogador, num, prazoAnual, prefs,
   tituloTela, vocHTML, xpDoLevel,
 } from "../util.js";
 
@@ -153,7 +153,8 @@ const LINHAS_COMPARATIVO = [
       ? `<span title="Previsão: ${dataBR(m.calc.dataEstimada)}">${num(Math.ceil(m.calc.diasNoRitmo))}</span>` : "—"],
 ];
 
-const valor = (v) => `<span title="${num(Math.round(v))}">${compacto(v)}</span>`;
+// Valores inteiros nas tabelas, como na planilha antiga.
+const valor = (v) => num(Math.round(v));
 const fmtPct2 = new Intl.NumberFormat("pt-BR", { style: "percent", minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const pct2 = (v) => fmtPct2.format(v);
 
@@ -194,12 +195,12 @@ function tabelaPorLevel(membros, prazo) {
     const porDia = Math.ceil((xpDoLevel(L) - m.atual.xp) / prazo.dias);
     const atinge = porDia <= m.ritmo;
     return `<td class="nv ${atinge ? "nv-sim" : "nv-nao"}"
-      title="${atinge ? "Atinge" : "Não atinge"} no ritmo atual: precisa de ${num(Math.round(porDia))} XP/dia (faz ${num(Math.round(m.ritmo))})">${compacto(porDia)}/dia</td>`;
+      title="${atinge ? "Atinge" : "Não atinge"} no ritmo atual: precisa de ${num(Math.round(porDia))} XP/dia (faz ${num(Math.round(m.ritmo))})">${num(porDia)}</td>`;
   };
 
   return `<table class="tabela-nv">
     <thead><tr><th class="num">Level</th>${membros.map((m) =>
-      `<th class="num">${esc(m.atual.nome)}<br><span class="muted">ritmo ${compacto(m.ritmo)}/dia</span></th>`).join("")}</tr></thead>
+      `<th class="num">${esc(m.atual.nome)}<br><span class="muted">ritmo ${num(Math.round(m.ritmo))}/dia</span></th>`).join("")}</tr></thead>
     <tbody>${niveis.map((L) => `<tr><td class="num"><strong>${L}</strong></td>${membros.map((m) => celula(m, L)).join("")}</tr>`).join("")}</tbody>
     <tfoot><tr><th class="num">Previsto em ${dataCurta(prazo.fim)}</th>${membros.map((m) =>
       `<td class="num nv-previsto" title="Level estimado em ${dataBR(prazo.fim)} mantendo a média dos últimos 30 dias">${m.previsto}</td>`).join("")}</tr></tfoot>

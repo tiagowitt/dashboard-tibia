@@ -163,8 +163,8 @@ export async function telaGuild(el, r) {
         }).join("")}
         <div class="cartao"><h2>Últimos Nemesis mortos</h2>
           <div class="tabela-rolagem" style="max-height:360px">
-            ${nemesis.length ? `<table><thead><tr><th>Data</th><th>Boss</th><th class="num">Mortes</th></tr></thead><tbody>
-              ${nemesis.map((n) => `<tr><td>${dataBR(n.data)}</td><td>${esc(n.boss)}</td><td class="num">${n.mortes}</td></tr>`).join("")}
+            ${nemesis.length ? `<table><thead><tr><th class="centro">Data</th><th>Boss</th><th class="num">Mortes</th></tr></thead><tbody>
+              ${nemesis.map((n) => `<tr><td class="centro">${dataBR(n.data)}</td><td>${esc(n.boss)}</td><td class="num">${n.mortes}</td></tr>`).join("")}
             </tbody></table>` : `<p class="vazio">Nenhum registro.</p>`}
           </div></div>
       </div>`;
@@ -191,18 +191,18 @@ function listaTop(itens, rotNome, rotValor, capitalizar = false) {
 
 function tabelaPessoas(lista, campoData, rotData, mostrarGuild) {
   if (!lista.length) return `<p class="vazio">Nenhum registro.</p>`;
-  return `<table><thead><tr><th>Personagem</th>${mostrarGuild ? "<th>Guild</th>" : ""}<th>Voc.</th><th class="num">Level</th><th class="num">${rotData}</th></tr></thead><tbody>
+  return `<table><thead><tr><th>Personagem</th>${mostrarGuild ? "<th>Guild</th>" : ""}<th class="centro">Voc.</th><th class="num">Level</th><th class="num">${rotData}</th></tr></thead><tbody>
     ${lista.map((p) => `<tr><td>${linkJogador(p.nome)}</td>${mostrarGuild ? `<td class="muted">${esc(p.guild)}</td>` : ""}
-      <td>${vocHTML(p.voc)}</td><td class="num">${p.level}</td><td class="num">${dataBR(p[campoData])}</td></tr>`).join("")}
+      <td class="centro">${vocHTML(p.voc)}</td><td class="num">${p.level}</td><td class="num">${dataBR(p[campoData])}</td></tr>`).join("")}
   </tbody></table>`;
 }
 
 function tabelaMembros(ms, mostrarGuild) {
-  return `<table><thead><tr><th>Personagem</th>${mostrarGuild ? "<th>Guild</th>" : ""}<th>Cargo</th><th>Voc.</th>
-    <th class="num">Level</th><th>Faixa</th><th class="num">XP 30d</th><th class="num">Rank HS</th><th class="num">Entrou</th></tr></thead><tbody>
+  return `<table><thead><tr><th>Personagem</th>${mostrarGuild ? "<th>Guild</th>" : ""}<th class="centro">Cargo</th><th class="centro">Voc.</th>
+    <th class="num">Level</th><th class="centro">Faixa</th><th class="num">XP 30d</th><th class="num">Rank HS</th><th class="num">Entrou</th></tr></thead><tbody>
     ${ms.map((m) => `<tr><td>${linkJogador(m.nome)}</td>${mostrarGuild ? `<td class="muted">${esc(m.guild)}</td>` : ""}
-      <td class="muted">${esc(m.cargo)}</td><td>${vocHTML(m.voc)}</td><td class="num">${m.level}</td><td>${m.faixa}</td>
-      <td class="num">${m.xp_30 == null ? "—" : compacto(m.xp_30)}</td><td class="num">${m.rank ?? "—"}</td>
+      <td class="muted centro">${esc(m.cargo)}</td><td class="centro">${vocHTML(m.voc)}</td><td class="num">${m.level}</td><td class="centro">${m.faixa}</td>
+      <td class="num">${m.xp_30 == null ? "—" : num(m.xp_30)}</td><td class="num">${m.rank ?? "—"}</td>
       <td class="num">${dataBR(m.entrou)}</td></tr>`).join("")}
   </tbody></table>`;
 }
