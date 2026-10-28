@@ -1,15 +1,28 @@
 // Formatação, regras de XP e pequenos utilitários de DOM.
 
 const fmtInteiro = new Intl.NumberFormat("pt-BR");
-const fmtCompacto = new Intl.NumberFormat("pt-BR", { notation: "compact", maximumFractionDigits: 1 });
-const fmtBilhoes = new Intl.NumberFormat("pt-BR", { notation: "compact", maximumFractionDigits: 2 });
+const fmtUmaCasa = new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 1 });
+const fmtDuasCasas = new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 2 });
 const fmtPct = new Intl.NumberFormat("pt-BR", { style: "percent", maximumFractionDigits: 1, signDisplay: "always" });
 const fmtData = new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric", timeZone: "UTC" });
 const fmtDataCurta = new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "2-digit", timeZone: "UTC" });
 
 export const num = (v) => (v == null ? "—" : fmtInteiro.format(v));
-// Bilhões com 2 casas (1,97 bi), o resto com 1 (94,7 mi).
-export const compacto = (v) => (v == null ? "—" : (Math.abs(v) >= 1e9 ? fmtBilhoes : fmtCompacto).format(v));
+// Padrão do Tibia: k = mil, kk = milhão, kkk = bilhão (65,1kk; 1,97kkk).
+// Bilhões com 2 casas, o resto com 1.
+const ESCALAS = [[1e9, "kkk", fmtDuasCasas], [1e6, "kk", fmtUmaCasa], [1e3, "k", fmtUmaCasa]];
+export function compacto(v) {
+  if (v == null) return "—";
+  const a = Math.abs(v);
+  for (let i = 0; i < ESCALAS.length; i++) {
+    const [base, sufixo, fmt] = ESCALAS[i];
+    if (a < base) continue;
+    // 999.960.000 arredondaria para "1.000kk": nesse caso sobe para a escala de cima.
+    if (i > 0 && Math.round((a / base) * 10) / 10 >= 1000) return `${ESCALAS[i - 1][2].format(v / ESCALAS[i - 1][0])}${ESCALAS[i - 1][1]}`;
+    return `${fmt.format(v / base)}${sufixo}`;
+  }
+  return fmtUmaCasa.format(v);
+}
 export const pct = (v) => (v == null || !isFinite(v) ? "—" : fmtPct.format(v));
 export const dataBR = (iso) => (iso ? fmtData.format(new Date(iso + "T00:00:00Z")) : "—");
 export const dataCurta = (iso) => fmtDataCurta.format(new Date(iso + "T00:00:00Z"));
