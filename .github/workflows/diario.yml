@@ -2,8 +2,16 @@ name: Coleta diária
 
 on:
   schedule:
-    - cron: "30 9 * * *"   # 06:30 de Brasília (UTC−3, sem horário de verão)
-  workflow_dispatch:        # botão "Run workflow" para rodar na mão
+    # O GitHub não garante o horário dos agendamentos: em horário de pico atrasa ou pula.
+    # Por isso há uma reserva; as duas só coletam o que ainda falta no dia (--so-faltantes).
+    - cron: "30 9 * * *"    # 06:30 de Brasília (UTC−3, sem horário de verão) — principal
+    - cron: "47 11 * * *"   # 08:47 de Brasília — reserva, se a principal não rodou ou falhou
+  workflow_dispatch:         # botão "Run workflow" para rodar na mão
+    inputs:
+      forcar:
+        description: "Coletar de novo mesmo se o dia já foi coletado (substitui os dados de hoje)"
+        type: boolean
+        default: false
 
 permissions:
   contents: write           # só para commitar os dados com o GITHUB_TOKEN automático
@@ -33,16 +41,18 @@ jobs:
       - name: Coletar highscore, kills e guilds
         id: coleta
         continue-on-error: true
-        run: python -m coletor.coletar
+        run: python -m coletor.coletar ${{ inputs.forcar && '' || '--so-faltantes' }}
 
+      # Se o dia já estava completo (coletou=false), não há nada para gerar nem commitar.
       - name: Gerar agregados do dashboard
         id: agregados
+        if: steps.coleta.outputs.coletou != 'false'
         continue-on-error: true
         run: python -m coletor.agregados
 
       # Mesmo se os agregados falharem, os Parquet coletados hoje precisam ser salvos.
       - name: Commitar dados
-        if: ${{ !cancelled() }}
+        if: ${{ !cancelled() && steps.coleta.outputs.coletou != 'false' }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"

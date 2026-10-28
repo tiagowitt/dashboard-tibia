@@ -4,12 +4,14 @@ Uso:
     python -m coletor.coletar                       # coleta tudo e grava em dados/
     python -m coletor.coletar --somente ranking     # só um conjunto
     python -m coletor.coletar --pasta-dados C:\\tmp  # grava em outra pasta (testes)
+    python -m coletor.coletar --so-faltantes        # só os conjuntos que ainda não têm o dia de hoje
 
 Cada conjunto é coletado e gravado de forma independente: se um falhar, os outros
 continuam sendo salvos, e o script termina com código 1 para o workflow acusar o erro.
 """
 
 import argparse
+import os
 import sys
 from datetime import date
 from pathlib import Path
@@ -17,7 +19,7 @@ from pathlib import Path
 import pandas as pd
 
 from coletor.api import ClienteAPI, ErroAPI
-from coletor.armazenamento import gravar_mensal
+from coletor.armazenamento import gravar_mensal, ler_conjunto
 from coletor.config import PASTA_DADOS, carregar_config, hoje_brasilia
 
 
@@ -77,10 +79,26 @@ COLETORES = {
 }
 
 
+def ja_coletados(pasta_dados: Path, data_extracao: date) -> set[str]:
+    """Conjuntos que já têm linhas com a data de extração informada."""
+    return {c for c in COLETORES
+            if not (df := ler_conjunto(c, pasta_dados)).empty and (df["extraction_date"] == data_extracao).any()}
+
+
+def avisar_workflow(**saidas) -> None:
+    """Passa valores para os próximos passos do GitHub Actions (sem efeito fora dele)."""
+    if destino := os.environ.get("GITHUB_OUTPUT"):
+        with open(destino, "a", encoding="utf-8") as f:
+            for chave, valor in saidas.items():
+                f.write(f"{chave}={valor}\n")
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--somente", choices=COLETORES, action="append",
                         help="coletar só este conjunto (pode repetir)")
+    parser.add_argument("--so-faltantes", action="store_true",
+                        help="pular os conjuntos que já têm o dia de hoje (execuções de reserva)")
     parser.add_argument("--pasta-dados", type=Path, default=PASTA_DADOS)
     args = parser.parse_args()
 
@@ -93,8 +111,20 @@ def main() -> int:
     data_extracao = hoje_brasilia()
     print(f"Coleta de {data_extracao} (mundo {cfg['coleta']['mundo']})", flush=True)
 
+    conjuntos = list(args.somente or COLETORES)
+    if args.so_faltantes:
+        prontos = ja_coletados(args.pasta_dados, data_extracao)
+        if prontos:
+            print(f"Já coletados hoje (pulando): {', '.join(sorted(prontos))}", flush=True)
+        conjuntos = [c for c in conjuntos if c not in prontos]
+        if not conjuntos:
+            print("Nada a coletar: o dia de hoje já está completo.")
+            avisar_workflow(coletou="false")
+            return 0
+    avisar_workflow(coletou="true")
+
     falhas = []
-    for conjunto in args.somente or COLETORES:
+    for conjunto in conjuntos:
         print(f"[{conjunto}]", flush=True)
         try:
             df = COLETORES[conjunto](api, cfg, data_extracao)

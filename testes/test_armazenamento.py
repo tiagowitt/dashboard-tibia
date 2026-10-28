@@ -36,3 +36,11 @@ def test_acumula_dias_diferentes_e_mantem_tipo_data(tmp_path):
 
     df = ler_conjunto("ranking", tmp_path)
     assert list(df["extraction_date"]) == [date(2026, 10, 26), date(2026, 10, 27)]
+
+
+def test_ja_coletados_identifica_conjuntos_do_dia(tmp_path):
+    from coletor.coletar import ja_coletados
+
+    gravar_mensal(_ranking(date(2026, 10, 28), [(1, "A", 100)]), "ranking", tmp_path)
+    assert ja_coletados(tmp_path, date(2026, 10, 28)) == {"ranking"}
+    assert ja_coletados(tmp_path, date(2026, 10, 29)) == set()
