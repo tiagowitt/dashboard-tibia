@@ -151,10 +151,11 @@ function desenharJogador(corpo, r, hist) {
 
 function tabelaHistorico(hist) {
   return `<table>
-    <thead><tr><th>Data</th><th class="num">Level</th><th class="num">XP no dia</th><th class="num">XP 7 dias</th>
-      <th class="num">XP 30 dias</th><th class="num">Rank</th><th class="num">Variação</th></tr></thead>
+    <thead><tr><th>Data</th><th class="num">Level</th><th class="num">XP total</th><th class="num">XP no dia</th>
+      <th class="num">XP 7 dias</th><th class="num">XP 30 dias</th><th class="num">Rank</th><th class="num">Variação</th></tr></thead>
     <tbody>${[...hist].reverse().map((l) => `<tr>
       <td>${dataBR(l.data)}</td><td class="num">${l.level}</td>
+      <td class="num">${num(l.xp)}</td>
       <td class="num">${num(l.xp_dia)}</td><td class="num">${compacto(l.xp_7)}</td><td class="num">${compacto(l.xp_30)}</td>
       <td class="num">${l.rank}</td><td class="num">${varRankHTML(l.var_rank)}</td></tr>`).join("")}
     </tbody></table>`;
