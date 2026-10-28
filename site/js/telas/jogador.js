@@ -115,7 +115,7 @@ function desenharJogador(corpo, r, hist) {
       return;
     }
     prefs.gravar(`meta.${atual.nome}`, meta);
-    const m = calcularMeta(atual, meta, r.data_ref, r.data_meta_anual);
+    const m = calcularMeta(atual, meta, r.data_ref);
     corpo.querySelector("#j-meta-res").innerHTML = `
       ${kpi("XP que falta", compacto(m.falta), num(Math.round(m.falta)))}
       ${kpi("Ritmo atual", `${compacto(m.ritmo)}/dia`, "média dos últimos 30 dias")}

@@ -1,8 +1,9 @@
-// Tela 3 — Análise PT: até 7 personagens com meta, comparação com a guild e XP/dia até o fim do ano.
+// Tela 3 — Análise PT: até 7 personagens com meta, comparação com a guild e levels possíveis até o fim do ano.
 import * as dados from "../dados.js";
 import { grafico, legendaHTML, linha, rotulosDatas } from "../graficos.js";
 import {
-  calcularMeta, compacto, corSerie, dataBR, esc, faixaDoLevel, linkJogador, num, pct, prefs, tituloTela, vocHTML, xpDoLevel,
+  calcularMeta, compacto, corSerie, dataBR, dataCurta, esc, faixaDoLevel, levelDaXp, linkJogador, num, pct, prazoAnual, prefs,
+  tituloTela, vocHTML, xpDoLevel,
 } from "../util.js";
 
 const MAXIMO = 7;
@@ -79,7 +80,7 @@ export async function telaPT(el, r) {
 function desenharAnalise(corpo, r, membros) {
   const presentes = membros.filter((m) => m.atual);
   const ausentes = membros.filter((m) => !m.atual);
-  const fimAno = `${r.data_ref.slice(0, 4)}-${r.data_meta_anual}`;
+  const prazo = prazoAnual(r.data_ref, r.data_meta_anual);
 
   for (const m of presentes) {
     m.guild = r.guild_de[m.atual.nome];
@@ -87,7 +88,7 @@ function desenharAnalise(corpo, r, membros) {
     const media = m.guild ? r.medias_faixa[m.guild]?.[m.faixa] : null;
     m.mediaFaixa = media;
     m.vsGuild = media ? m.atual.xp_30 / media.media - 1 : null;
-    m.calc = m.meta > m.atual.level ? calcularMeta(m.atual, m.meta, r.data_ref, r.data_meta_anual) : null;
+    m.calc = m.meta > m.atual.level ? calcularMeta(m.atual, m.meta, r.data_ref) : null;
   }
 
   corpo.innerHTML = `
@@ -104,8 +105,15 @@ function desenharAnalise(corpo, r, membros) {
       <div class="grafico alto" id="pt-grafico"></div>
     </div>
     <div class="cartao">
-      <div class="cartao-cab"><h2>XP/dia necessária até ${dataBR(fimAno)}</h2><span class="muted">por level alvo</span></div>
-      <div class="tabela-rolagem">${tabelaPorLevel(presentes, r)}</div>
+      <div class="cartao-cab"><h2>Levels possíveis até ${dataBR(prazo.fim)}</h2>
+        <span class="muted">${prazo.dias} dias restantes · ritmo = média dos últimos 30 dias</span></div>
+      <div class="legenda legenda-nv">
+        <span class="item"><i class="quad nv-ok"></i>✓ Já atingido</span>
+        <span class="item"><i class="quad nv-sim"></i>Atinge no ritmo atual</span>
+        <span class="item"><i class="quad nv-nao"></i>Não atinge no ritmo atual</span>
+      </div>
+      <div class="tabela-rolagem">${tabelaPorLevel(presentes, prazo)}</div>
+      <p class="muted" style="margin:.5rem 0 0">Cada célula mostra a XP por dia necessária para chegar ao level até ${dataBR(prazo.fim)}.</p>
     </div>` : `<p class="muted">Adicione personagens para ver a análise.</p>`}`;
 
   if (!presentes.length) return;
@@ -154,32 +162,37 @@ function tabelaComparativa(membros) {
     }).join("")}</tbody></table>`;
 }
 
-function tabelaPorLevel(membros, r) {
-  const fimAno = `${r.data_ref.slice(0, 4)}-${r.data_meta_anual}`;
-  const diasAteFim = Math.round((new Date(fimAno) - new Date(r.data_ref)) / 86400000);
-  if (diasAteFim <= 0) return `<p class="muted">O prazo de ${dataBR(fimAno)} já passou.</p>`;
+// Linhas de 50 em 50 levels: para cada personagem, mostra se o level já foi atingido,
+// se é alcançável até o fim do ano no ritmo dos últimos 30 dias, ou se não é.
+const PASSO_LEVEL = 50;
+const MAX_LINHAS = 40;
 
-  const menor = Math.min(...membros.map((m) => m.atual.level));
-  const maior = Math.max(...membros.map((m) => Math.max(m.meta || 0, m.atual.level + 50)));
-  const passo = maior - menor > 400 ? 50 : maior - menor > 150 ? 25 : 10;
+function tabelaPorLevel(membros, prazo) {
+  if (prazo.dias <= 0) return `<p class="muted">Sem dias restantes até ${dataBR(prazo.fim)}.</p>`;
+
+  for (const m of membros) {
+    m.ritmo = Math.max(0, m.atual.xp_30 / 30);
+    m.previsto = levelDaXp(m.atual.xp + m.ritmo * prazo.dias);
+  }
+  // Da primeira linha ainda não atingida pelo menor level até a primeira que nem o mais rápido alcança.
+  const primeiro = Math.floor(Math.min(...membros.map((m) => m.atual.level)) / PASSO_LEVEL) * PASSO_LEVEL + PASSO_LEVEL;
+  const ultimo = Math.max(...membros.map((m) => Math.floor(m.previsto / PASSO_LEVEL) * PASSO_LEVEL + PASSO_LEVEL));
   const niveis = [];
-  for (let L = Math.ceil((menor + 1) / passo) * passo; L <= Math.ceil(maior / passo) * passo; L += passo) niveis.push(L);
-  for (const m of membros) if (m.meta && !niveis.includes(m.meta)) niveis.push(m.meta);
-  niveis.sort((a, b) => a - b);
+  for (let L = primeiro; L <= ultimo && niveis.length < MAX_LINHAS; L += PASSO_LEVEL) niveis.push(L);
 
-  return `<table>
+  const celula = (m, L) => {
+    if (m.atual.level >= L) return `<td class="nv nv-ok" title="Já atingiu o level ${L}">✓ atingido</td>`;
+    const porDia = (xpDoLevel(L) - m.atual.xp) / prazo.dias;
+    const atinge = porDia <= m.ritmo;
+    return `<td class="nv ${atinge ? "nv-sim" : "nv-nao"}"
+      title="${atinge ? "Atinge" : "Não atinge"} no ritmo atual: precisa de ${num(Math.round(porDia))} XP/dia (faz ${num(Math.round(m.ritmo))})">${compacto(porDia)}/dia</td>`;
+  };
+
+  return `<table class="tabela-nv">
     <thead><tr><th class="num">Level</th>${membros.map((m) =>
-      `<th class="num">${esc(m.atual.nome)}<br><span class="muted">${compacto(m.atual.xp_30 / 30)}/dia hoje</span></th>`).join("")}</tr></thead>
-    <tbody>${niveis.map((L) => `<tr>
-      <td class="num"><strong>${L}</strong></td>
-      ${membros.map((m) => {
-        const falta = xpDoLevel(L) - m.atual.xp;
-        if (falta <= 0) return `<td class="num muted">✓</td>`;
-        const porDia = falta / diasAteFim;
-        const ritmo = m.atual.xp_30 / 30;
-        const ehMeta = L === m.meta;
-        return `<td class="num ${porDia <= ritmo ? "sobe" : ""}" title="${num(Math.round(porDia))} XP/dia">${ehMeta ? "<strong>" : ""}${compacto(porDia)}${ehMeta ? " ★</strong>" : ""}</td>`;
-      }).join("")}
-    </tr>`).join("")}</tbody></table>
-    <p class="muted" style="margin:.5rem 0 0">${diasAteFim} dias até ${dataBR(fimAno)}. Verde = cabe no ritmo atual (média de 30 dias). ★ = meta do personagem.</p>`;
+      `<th class="num">${esc(m.atual.nome)}<br><span class="muted">ritmo ${compacto(m.ritmo)}/dia</span></th>`).join("")}</tr></thead>
+    <tbody>${niveis.map((L) => `<tr><td class="num"><strong>${L}</strong></td>${membros.map((m) => celula(m, L)).join("")}</tr>`).join("")}</tbody>
+    <tfoot><tr><th class="num">Previsto em ${dataCurta(prazo.fim)}</th>${membros.map((m) =>
+      `<td class="num nv-previsto" title="Level estimado em ${dataBR(prazo.fim)} mantendo a média dos últimos 30 dias">${m.previsto}</td>`).join("")}</tr></tfoot>
+  </table>`;
 }

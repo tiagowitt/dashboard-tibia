@@ -46,11 +46,28 @@ export function somarDias(iso, dias) {
 }
 
 /** Cálculos da meta de level a partir da linha do jogador (xp, xp_30) e da data de referência. */
-export function calcularMeta(linha, meta, dataRef, dataMetaAnual) {
+/** Maior level já alcançado com essa XP total (inverso de xpDoLevel). */
+export function levelDaXp(xp) {
+  let L = Math.max(1, Math.floor(Math.cbrt((xp * 3) / 50)));  // aproximação; o laço acerta o valor exato
+  while (xpDoLevel(L + 1) <= xp) L++;
+  while (L > 1 && xpDoLevel(L) > xp) L--;
+  return L;
+}
+
+/**
+ * Prazo do fim do ano (dia/mês do config, ex. "12-31") contado a partir da data de referência.
+ * Sempre usa o ano da data; se ela já é o próprio dia do prazo (ou depois), passa para o ano seguinte.
+ */
+export function prazoAnual(dataRef, dataMetaAnual) {
+  let ano = +dataRef.slice(0, 4);
+  if (diasEntre(dataRef, `${ano}-${dataMetaAnual}`) <= 0) ano++;
+  const fim = `${ano}-${dataMetaAnual}`;
+  return { fim, dias: diasEntre(dataRef, fim) };
+}
+
+export function calcularMeta(linha, meta, dataRef) {
   const falta = xpDoLevel(meta) - linha.xp;
   const ritmo = linha.xp_30 / 30;
-  const fimAno = `${dataRef.slice(0, 4)}-${dataMetaAnual}`;
-  const diasAteFim = diasEntre(dataRef, fimAno);
   const diasNoRitmo = falta <= 0 ? 0 : ritmo > 0 ? falta / ritmo : Infinity;
   return {
     falta: Math.max(0, falta),
@@ -58,8 +75,6 @@ export function calcularMeta(linha, meta, dataRef, dataMetaAnual) {
     ritmo,
     diasNoRitmo,
     dataEstimada: isFinite(diasNoRitmo) ? somarDias(dataRef, Math.ceil(diasNoRitmo)) : null,
-    diasAteFim,
-    xpDiaAteFim: falta <= 0 ? 0 : diasAteFim > 0 ? falta / diasAteFim : null,
   };
 }
 
