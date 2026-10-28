@@ -2,7 +2,7 @@
 import * as dados from "../dados.js";
 import { grafico, legendaHTML, linha, rotulosDatas } from "../graficos.js";
 import {
-  calcularMeta, compacto, corSerie, dataBR, dataCurta, esc, faixaDoLevel, levelDaXp, linkJogador, num, pct, prazoAnual, prefs,
+  calcularMeta, compacto, corSerie, dataBR, dataCurta, esc, faixaDoLevel, levelDaXp, linkJogador, num, prazoAnual, prefs,
   tituloTela, vocHTML, xpDoLevel,
 } from "../util.js";
 
@@ -135,31 +135,36 @@ function desenharAnalise(corpo, r, membros) {
   });
 }
 
+// Comparativo com os personagens nas colunas e os indicadores nas linhas (mesma ordem da planilha antiga).
+const LINHAS_COMPARATIVO = [
+  ["Level atual", (m) => `<strong>${m.atual.level}</strong>`],
+  ["Levels em 30 dias", (m) => num(m.atual.lv_30)],
+  ["Média de XP diária (30 dias)", (m) => valor(m.atual.xp_30 / 30)],
+  ["XP ontem", (m) => valor(m.atual.xp_dia)],
+  ["XP 7 dias", (m) => valor(m.atual.xp_7)],
+  ["XP 30 dias", (m) => valor(m.atual.xp_30)],
+  ["% XP vs média da guild na faixa", (m) => m.vsGuild == null
+    ? `<span class="muted" title="Sem guild ou sem média na faixa">—</span>`
+    : `<span class="var ${m.vsGuild > 0 ? "sobe" : m.vsGuild < 0 ? "desce" : ""}"
+        title="${esc(m.guild)} · ${m.faixa}: média ${num(m.mediaFaixa.media)} (${m.mediaFaixa.n} membros no top 1000)">${m.vsGuild > 0 ? "▲" : m.vsGuild < 0 ? "▼" : ""} ${pct2(Math.abs(m.vsGuild))}</span>`],
+  ["Meta de level", (m) => m.meta ? `<strong>${m.meta}</strong>` : `<span class="muted">—</span>`],
+  ["Dias para a meta", (m) => !m.calc ? `<span class="muted">${m.meta ? "meta atingida" : "—"}</span>`
+    : isFinite(m.calc.diasNoRitmo)
+      ? `<span title="Previsão: ${dataBR(m.calc.dataEstimada)}">${num(Math.ceil(m.calc.diasNoRitmo))}</span>` : "—"],
+];
+
+const valor = (v) => `<span title="${num(Math.round(v))}">${compacto(v)}</span>`;
+const fmtPct2 = new Intl.NumberFormat("pt-BR", { style: "percent", minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const pct2 = (v) => fmtPct2.format(v);
+
 function tabelaComparativa(membros) {
-  return `<table>
-    <thead><tr>
-      <th>Personagem</th><th>Voc.</th><th class="num">Level</th><th class="num">XP dia</th><th class="num">XP 7d</th>
-      <th class="num">XP 30d</th><th class="num">Média/dia</th><th>Faixa</th><th class="num">vs guild</th>
-      <th class="num">Meta</th><th class="num">Falta</th><th class="num">Dias no ritmo</th><th class="num">Previsão</th>
-    </tr></thead>
-    <tbody>${membros.map((m) => {
-      const a = m.atual, c = m.calc;
-      return `<tr>
-        <td>${linkJogador(a.nome)}</td><td>${vocHTML(a.voc)}</td><td class="num">${a.level}</td>
-        <td class="num" title="${num(a.xp_dia)}">${compacto(a.xp_dia)}</td>
-        <td class="num" title="${num(a.xp_7)}">${compacto(a.xp_7)}</td>
-        <td class="num" title="${num(a.xp_30)}">${compacto(a.xp_30)}</td>
-        <td class="num">${compacto(a.xp_30 / 30)}</td>
-        <td>${m.faixa}</td>
-        <td class="num ${m.vsGuild > 0 ? "sobe" : m.vsGuild < 0 ? "desce" : ""}"
-            title="${m.mediaFaixa ? `Média ${esc(m.guild)} ${m.faixa}: ${num(m.mediaFaixa.media)} (${m.mediaFaixa.n} membros)` : "Sem guild ou sem média na faixa"}">${pct(m.vsGuild)}</td>
-        <td class="num">${m.meta || "—"}</td>
-        ${c ? `<td class="num" title="${num(Math.round(c.falta))}">${compacto(c.falta)}</td>
-          <td class="num">${isFinite(c.diasNoRitmo) ? num(Math.ceil(c.diasNoRitmo)) : "—"}</td>
-          <td class="num">${c.dataEstimada ? dataBR(c.dataEstimada) : "—"}</td>`
-        : `<td class="num muted" colspan="3">${m.meta ? "meta atingida" : "sem meta"}</td>`}
-      </tr>`;
-    }).join("")}</tbody></table>`;
+  return `<table class="tabela-comparativa">
+    <thead><tr><th></th>${membros.map((m) =>
+      `<th class="num"><span class="ponto-serie" style="--cor:${corSerie(m.i)}"></span>${linkJogador(m.atual.nome)}
+        <div class="sub-cab">${vocHTML(m.atual.voc)}</div></th>`).join("")}</tr></thead>
+    <tbody>${LINHAS_COMPARATIVO.map(([rotulo, celula]) => `<tr><th scope="row">${rotulo}</th>${membros.map((m) =>
+      `<td class="num">${celula(m)}</td>`).join("")}</tr>`).join("")}
+    </tbody></table>`;
 }
 
 // Linhas de 50 em 50 levels: para cada personagem, mostra se o level já foi atingido,
@@ -185,7 +190,8 @@ function tabelaPorLevel(membros, prazo) {
 
   const celula = (m, L) => {
     if (m.atual.level >= L) return `<td class="nv nv-ok" title="Já atingiu o level ${L}">✓ atingido</td>`;
-    const porDia = (xpDoLevel(L) - m.atual.xp) / prazo.dias;
+    // Arredonda para cima: é o mínimo por dia para chegar lá (igual à planilha antiga).
+    const porDia = Math.ceil((xpDoLevel(L) - m.atual.xp) / prazo.dias);
     const atinge = porDia <= m.ritmo;
     return `<td class="nv ${atinge ? "nv-sim" : "nv-nao"}"
       title="${atinge ? "Atinge" : "Não atinge"} no ritmo atual: precisa de ${num(Math.round(porDia))} XP/dia (faz ${num(Math.round(m.ritmo))})">${compacto(porDia)}/dia</td>`;

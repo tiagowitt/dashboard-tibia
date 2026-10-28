@@ -55,14 +55,16 @@ export function levelDaXp(xp) {
 }
 
 /**
- * Prazo do fim do ano (dia/mês do config, ex. "12-31") contado a partir da data de referência.
- * Sempre usa o ano da data; se ela já é o próprio dia do prazo (ou depois), passa para o ano seguinte.
+ * Prazo do fim do ano (dia/mês do config, ex. "12-31").
+ * Os dias contam a partir do dia da atualização (dia de referência + 1), como na planilha antiga:
+ * dados de 27/10 (atualizados em 28/10) → 64 dias até 31/12. Sem dias restantes, passa para o ano seguinte.
  */
 export function prazoAnual(dataRef, dataMetaAnual) {
-  let ano = +dataRef.slice(0, 4);
-  if (diasEntre(dataRef, `${ano}-${dataMetaAnual}`) <= 0) ano++;
+  const atualizacao = somarDias(dataRef, 1);
+  let ano = +atualizacao.slice(0, 4);
+  if (diasEntre(atualizacao, `${ano}-${dataMetaAnual}`) <= 0) ano++;
   const fim = `${ano}-${dataMetaAnual}`;
-  return { fim, dias: diasEntre(dataRef, fim) };
+  return { fim, dias: diasEntre(atualizacao, fim) };
 }
 
 export function calcularMeta(linha, meta, dataRef) {

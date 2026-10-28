@@ -58,14 +58,14 @@ Mundo e guilds devem ficar em um arquivo de configuração único, não fixos no
 - **XP 7 / 30 dias** = soma da XP ganha nos últimos 7 / 30 dias de calendário, dentro da mesma sessão.
 - **Variação de rank** = rank anterior − rank atual (positivo = subiu).
 - **Fórmula de XP por level (Tibia):** XP(L) = 50/3·L³ − 100·L² + 850/3·L − 200.
-- **Meta de level:** XP que falta = XP(meta) − XP atual; dias no ritmo atual = falta ÷ (XP 30 dias ÷ 30); XP/dia necessária até 31/12 = falta ÷ dias até 31/12.
+- **Meta de level:** XP que falta = XP(meta) − XP atual; dias no ritmo atual = falta ÷ (XP 30 dias ÷ 30); XP/dia necessária até 31/12 = falta ÷ dias até 31/12, **arredondado para cima**, com os dias contados a partir da **data da atualização** (dia de referência + 1): dados de 27/10, atualizados em 28/10 → 64 dias (conferido com a planilha em 28/10/2026).
 - **Média da guild por faixa de level:** faixas "2 - 199", "200 - 299" … "1900 - 1999", "2000+". Média da XP 30 dias apenas dos membros da guild que estão no top 1000 no último dia. Comparação de um jogador = XP 30 dias dele ÷ média da faixa dele − 1.
 
 ## Dashboard (telas)
 
 1. **Ranking XP:** top por XP no dia / 7 dias / 30 dias, com seletor de data, busca, filtro por vocação e por guild, variação no highscore.
 2. **Jogador:** KPIs (level, levels em 30 dias, XP dia/7/30, média diária, rank), gráficos de XP por dia (barras + média móvel 7d), level e posição no highscore, calculadora de meta, histórico diário.
-3. **Análise PT:** escolher até 7 personagens (padrão: Burtantan 800, Xar Lovinhu 800, Kelvin Klein 900, Parametro Arda 900, Neevez Relajado 1000 — nome e meta), tabela comparativa, % vs média da guild na faixa, dias até a meta, tabela "Levels possíveis até 31/12" (linhas de 50 em 50 levels; cada célula = já atingido / atinge / não atinge no ritmo dos últimos 30 dias, com a XP/dia necessária; linha final com o level previsto em 31/12; sem metas nem estrela — a meta fica no Comparativo), gráfico de XP dos últimos 30 dias. O prazo vem do ano da data de referência e, a partir do próprio 31/12, passa para o ano seguinte (`prazoAnual` em `site/js/util.js`).
+3. **Análise PT:** escolher até 7 personagens (padrão: Burtantan 800, Xar Lovinhu 800, Kelvin Klein 900, Parametro Arda 900, Neevez Relajado 1000 — nome e meta), tabela comparativa com **personagens nas colunas e indicadores nas linhas** (como a planilha: Level atual, Levels em 30 dias, Média de XP diária, XP ontem, XP 7 dias, XP 30 dias, % vs média da guild na faixa, Meta, Dias para a meta), tabela "Levels possíveis até 31/12" (linhas de 50 em 50 levels; cada célula = já atingido / atinge / não atinge no ritmo dos últimos 30 dias, com a XP/dia necessária; linha final com o level previsto em 31/12; sem metas nem estrela — a meta fica no Comparativo), gráfico de XP dos últimos 30 dias. O prazo vem do ano da data de referência e, a partir do próprio 31/12, passa para o ano seguinte (`prazoAnual` em `site/js/util.js`).
 4. **Guild & Kills:** membros por dia, composição por faixa × vocação, média de XP por faixa nas duas guilds, entradas e saídas em 30 dias; criaturas mais mortas, quem mais matou jogadores, bosses mortos (Nemesis/Archfoe/Bane).
 
 Cores por vocação fixas (EK, RP, ED, MS, EM). Tema claro e escuro. Funcionar no celular.

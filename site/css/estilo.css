@@ -261,9 +261,20 @@ td.pos { color: var(--texto-3); width: 2.75rem; }
 .var.sobe { background: color-mix(in srgb, var(--sobe) 12%, transparent); }
 .var.desce { background: color-mix(in srgb, var(--desce) 12%, transparent); }
 
+/* Comparativo da PT: personagens nas colunas, indicadores nas linhas */
+.tabela-comparativa tbody th[scope="row"] {
+  position: static; text-transform: none; letter-spacing: normal; font-size: .85rem; font-weight: 500;
+  color: var(--texto-2); background: transparent;
+}
+.tabela-comparativa thead th { text-transform: none; letter-spacing: normal; font-size: .9rem; }
+.tabela-comparativa thead th a { color: var(--texto); font-weight: 650; }
+.tabela-comparativa .sub-cab { margin-top: .25rem; }
+.tabela-comparativa td { min-width: 7.5rem; }
+.ponto-serie { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--cor); margin-right: .4rem; vertical-align: middle; }
+
 /* Tabela "levels possíveis até o fim do ano": três situações por célula */
 .tabela-nv td.nv { text-align: right; font-variant-numeric: tabular-nums; border-left: 3px solid var(--superficie); }
-.nv-ok { color: var(--texto-3); background: var(--superficie-2); }
+.nv-ok { color: var(--texto-2); background: color-mix(in srgb, var(--destaque) 12%, var(--superficie)); }
 .nv-sim { color: var(--sobe); font-weight: 650; background: color-mix(in srgb, var(--sobe) 13%, var(--superficie)); }
 .nv-nao { color: var(--texto-2); background: color-mix(in srgb, var(--desce) 9%, var(--superficie)); }
 .tabela-nv tbody tr:hover td.nv { filter: brightness(0.97); }
@@ -271,7 +282,7 @@ td.pos { color: var(--texto-3); width: 2.75rem; }
 .tabela-nv tfoot th { text-transform: none; letter-spacing: normal; font-size: .8rem; color: var(--texto-2); }
 .nv-previsto { font-size: 1.05rem; font-weight: 700; color: var(--texto); }
 .legenda-nv .item i.quad { width: 14px; height: 14px; border: 1px solid var(--borda-forte); }
-.legenda-nv .item i.nv-ok { background: var(--superficie-2); }
+.legenda-nv .item i.nv-ok { background: color-mix(in srgb, var(--destaque) 30%, var(--superficie)); }
 .legenda-nv .item i.nv-sim { background: color-mix(in srgb, var(--sobe) 35%, var(--superficie)); }
 .legenda-nv .item i.nv-nao { background: color-mix(in srgb, var(--desce) 25%, var(--superficie)); }
 
