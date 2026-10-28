@@ -165,6 +165,7 @@ function tabelaComparativa(membros) {
 // Linhas de 50 em 50 levels: para cada personagem, mostra se o level já foi atingido,
 // se é alcançável até o fim do ano no ritmo dos últimos 30 dias, ou se não é.
 const PASSO_LEVEL = 50;
+const LINHAS_ALEM = 4;  // faixas extras depois da primeira que nem o mais rápido alcança
 const MAX_LINHAS = 40;
 
 function tabelaPorLevel(membros, prazo) {
@@ -174,9 +175,11 @@ function tabelaPorLevel(membros, prazo) {
     m.ritmo = Math.max(0, m.atual.xp_30 / 30);
     m.previsto = levelDaXp(m.atual.xp + m.ritmo * prazo.dias);
   }
-  // Da primeira linha ainda não atingida pelo menor level até a primeira que nem o mais rápido alcança.
+  // Da primeira linha ainda não atingida pelo menor level até a primeira que nem o mais rápido
+  // alcança, mais LINHAS_ALEM faixas para mostrar o quanto falta além disso.
   const primeiro = Math.floor(Math.min(...membros.map((m) => m.atual.level)) / PASSO_LEVEL) * PASSO_LEVEL + PASSO_LEVEL;
-  const ultimo = Math.max(...membros.map((m) => Math.floor(m.previsto / PASSO_LEVEL) * PASSO_LEVEL + PASSO_LEVEL));
+  const ultimo = Math.max(...membros.map((m) => Math.floor(m.previsto / PASSO_LEVEL) * PASSO_LEVEL + PASSO_LEVEL))
+    + LINHAS_ALEM * PASSO_LEVEL;
   const niveis = [];
   for (let L = primeiro; L <= ultimo && niveis.length < MAX_LINHAS; L += PASSO_LEVEL) niveis.push(L);
 
