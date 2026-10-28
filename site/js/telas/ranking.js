@@ -1,11 +1,30 @@
 // Tela 1 — Ranking XP: top por XP no dia / 7 / 30 dias, com data, busca e filtros.
 import * as dados from "../dados.js";
 import {
-  compacto, dataBR, esc, kpi, linkJogador, num, posicaoHTML, prefs, tituloTela, vocHTML, VOCACOES,
+  compacto, dataBR, esc, kpi, linkJogador, num, pct, posicaoHTML, prefs, somarDias, tituloTela, vocHTML, VOCACOES,
 } from "../util.js";
 
 const PERIODOS = { xp_dia: "Dia", xp_7: "7 dias", xp_30: "30 dias" };
 const DESCRICAO = { xp_dia: "no dia", xp_7: "nos últimos 7 dias", xp_30: "nos últimos 30 dias" };
+// Período anterior usado na variação: o dia de antes, ou os 7 / 30 dias imediatamente anteriores.
+const DIAS_ANTES = { xp_dia: 1, xp_7: 7, xp_30: 30 };
+const ROTULO_VARIACAO = { xp_dia: "vs dia anterior", xp_7: "vs 7 dias antes", xp_30: "vs 30 dias antes" };
+
+/** XP do período anterior de cada nome (mapa nome → valor), ou mapa vazio se não houver o dia. */
+async function periodoAnterior(r, data, p) {
+  const anterior = somarDias(data, -DIAS_ANTES[p]);
+  if (!r.datas.includes(anterior)) return new Map();
+  const linhas = await dados.mes(anterior.slice(0, 7));
+  return new Map(linhas.filter((l) => l.data === anterior).map((l) => [l.nome, l[p]]));
+}
+
+function variacaoHTML(atual, anterior) {
+  // Sem base de comparação (não estava no top, ou não ganhou XP antes): não há % que faça sentido.
+  if (anterior == null || anterior <= 0) return `<span class="muted" title="Sem XP no período anterior">—</span>`;
+  const v = atual / anterior - 1;
+  const classe = v > 0.0005 ? "sobe" : v < -0.0005 ? "desce" : "";
+  return `<span class="var ${classe}" title="Antes: ${num(anterior)}">${v > 0 ? "▲" : v < 0 ? "▼" : ""} ${pct(v).replace(/^[+-]/, "")}</span>`;
+}
 const POR_PAGINA = 100;
 
 export async function telaRanking(el, r) {
@@ -57,7 +76,8 @@ export async function telaRanking(el, r) {
     el.querySelectorAll("#r-periodo button").forEach((b) => b.setAttribute("aria-pressed", b.dataset.p === estado.periodo));
     el.querySelectorAll("#r-vocs button").forEach((b) => b.setAttribute("aria-pressed", estado.vocs.has(b.dataset.v)));
 
-    const linhasMes = await dados.mes(estado.data.slice(0, 7));
+    const [linhasMes, antes] = await Promise.all([
+      dados.mes(estado.data.slice(0, 7)), periodoAnterior(r, estado.data, estado.periodo)]);
     const busca = estado.busca.trim().toLowerCase();
     const p = estado.periodo;
     let linhas = linhasMes.filter((l) => l.data === estado.data);
@@ -91,7 +111,7 @@ export async function telaRanking(el, r) {
       <table>
         <thead><tr>
           <th class="num">#</th><th>Personagem</th><th>Vocação</th><th class="num">Level</th>
-          <th class="num">XP ${PERIODOS[p].toLowerCase()}</th>
+          <th class="num">XP ${PERIODOS[p].toLowerCase()}</th><th class="num">${ROTULO_VARIACAO[p]}</th>
         </tr></thead>
         <tbody>${visiveis.map((l) => `
           <tr>
@@ -100,6 +120,7 @@ export async function telaRanking(el, r) {
             <td>${vocHTML(l.voc)}</td>
             <td class="num">${l.level}</td>
             <td class="num" title="${num(l[p])}"><strong>${compacto(l[p])}</strong></td>
+            <td class="num">${variacaoHTML(l[p], antes.get(l.nome))}</td>
           </tr>`).join("")}
         </tbody>
       </table>
