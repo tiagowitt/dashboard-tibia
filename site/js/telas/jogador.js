@@ -120,10 +120,7 @@ function desenharJogador(corpo, r, hist) {
       ${kpi("XP que falta", compacto(m.falta), num(Math.round(m.falta)))}
       ${kpi("Ritmo atual", `${compacto(m.ritmo)}/dia`, "média dos últimos 30 dias")}
       ${kpi("Dias no ritmo atual", isFinite(m.diasNoRitmo) ? num(Math.ceil(m.diasNoRitmo)) : "—",
-            m.dataEstimada ? `previsão: ${dataBR(m.dataEstimada)}` : "sem ganho de XP em 30 dias")}
-      ${kpi(`XP/dia até ${dataBR(r.data_ref.slice(0, 4) + "-" + r.data_meta_anual)}`,
-            m.xpDiaAteFim == null ? "—" : compacto(m.xpDiaAteFim),
-            m.xpDiaAteFim == null ? "prazo encerrado" : `${m.diasAteFim} dias restantes`)}`;
+            m.dataEstimada ? `previsão: ${dataBR(m.dataEstimada)}` : "sem ganho de XP em 30 dias")}`;
   };
   corpo.querySelector("#j-meta").addEventListener("input", kpiMeta);
   kpiMeta();
