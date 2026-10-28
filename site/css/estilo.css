@@ -269,6 +269,11 @@ td.pos { color: var(--texto-3); width: 2.75rem; }
 .tabela-comparativa thead th { text-transform: none; letter-spacing: normal; font-size: .9rem; }
 .tabela-comparativa thead th a { color: var(--texto); font-weight: 650; }
 .tabela-comparativa .sub-cab { margin-top: .25rem; }
+.meta-input {
+  width: 5.5rem; min-height: 32px; padding: .25rem .4rem; text-align: center; font-weight: 700;
+  background: var(--destaque-suave); border-color: color-mix(in srgb, var(--destaque) 35%, transparent);
+}
+.meta-input::placeholder { color: var(--texto-3); font-weight: 400; }
 .tabela-comparativa td { min-width: 7.5rem; }
 .ponto-serie { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--cor); margin-right: .4rem; vertical-align: middle; }
 

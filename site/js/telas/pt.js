@@ -16,7 +16,7 @@ export async function telaPT(el, r) {
   el.innerHTML = `
     ${tituloTela("Análise da PT", "Compare o ritmo de cada personagem, a média da guild e o caminho até a meta")}
     <div class="cartao">
-      <div class="cartao-cab"><h2>Personagens</h2><span class="muted">até ${MAXIMO}, com a meta de level de cada um</span></div>
+      <div class="cartao-cab"><h2>Personagens</h2><span class="muted">até ${MAXIMO} · a meta de level fica na tabela Comparativo</span></div>
       <form id="pt-form">
         <div class="pt-linhas" id="pt-linhas"></div>
         <datalist id="pt-nomes">${nomes.map((n) => `<option value="${esc(n)}">`).join("")}</datalist>
@@ -36,17 +36,17 @@ export async function telaPT(el, r) {
       <div class="pt-linha">
         <span class="ponto" style="--cor:${corSerie(i)}"></span>
         <input list="pt-nomes" name="nome" value="${esc(p.nome)}" placeholder="Personagem" aria-label="Personagem ${i + 1}" autocomplete="off">
-        <input type="number" name="meta" value="${p.meta}" min="2" max="5000" title="Meta de level" aria-label="Meta de level ${i + 1}">
         <button type="button" data-remover="${i}" aria-label="Remover ${esc(p.nome)}">✕</button>
       </div>`).join("");
     $("#pt-add").disabled = lista.length >= MAXIMO;
   }
 
+  // A meta não está no editor: cada linha mantém a meta que já tinha (editada no Comparativo).
   function lerEditor() {
     const linhas = [...el.querySelectorAll(".pt-linha")];
-    lista = linhas.map((d) => ({
+    lista = linhas.map((d, i) => ({
       nome: d.querySelector("[name=nome]").value.trim(),
-      meta: +d.querySelector("[name=meta]").value || 0,
+      meta: lista[i]?.meta || 0,
     })).filter((p) => p.nome);
   }
 
@@ -55,7 +55,7 @@ export async function telaPT(el, r) {
     lerEditor(); lista.splice(+b.dataset.remover, 1); desenharEditor();
   });
   $("#pt-add").addEventListener("click", () => {
-    lerEditor(); if (lista.length < MAXIMO) lista.push({ nome: "", meta: 1000 }); desenharEditor();
+    lerEditor(); if (lista.length < MAXIMO) lista.push({ nome: "", meta: 0 }); desenharEditor();
     el.querySelector(".pt-linha:last-child input")?.focus();
   });
   $("#pt-padrao").addEventListener("click", () => {
@@ -70,14 +70,17 @@ export async function telaPT(el, r) {
       const linhas = hist.filter((l) => l.nome.toLowerCase() === p.nome.toLowerCase());
       return { ...p, i, linhas, atual: linhas.at(-1) };
     });
-    desenharAnalise($("#pt-corpo"), r, membros);
+    desenharAnalise($("#pt-corpo"), r, membros, (i, meta) => {
+      lista[i].meta = meta;
+      analisar();
+    });
   }
 
   desenharEditor();
   await analisar();
 }
 
-function desenharAnalise(corpo, r, membros) {
+function desenharAnalise(corpo, r, membros, aoMudarMeta) {
   const presentes = membros.filter((m) => m.atual);
   const ausentes = membros.filter((m) => !m.atual);
   const prazo = prazoAnual(r.data_ref, r.data_meta_anual);
@@ -118,6 +121,12 @@ function desenharAnalise(corpo, r, membros) {
 
   if (!presentes.length) return;
 
+  // Meta editável direto no Comparativo: salva e recalcula ao confirmar (Enter ou sair do campo).
+  corpo.querySelectorAll(".meta-input").forEach((campo) => {
+    campo.addEventListener("change", () => aoMudarMeta(+campo.dataset.i, Math.max(0, Math.round(+campo.value || 0))));
+    campo.addEventListener("keydown", (e) => { if (e.key === "Enter") campo.blur(); });
+  });
+
   // Gráfico: uma linha por personagem, nas datas dos últimos 30 dias.
   const inicio = new Date(r.data_ref + "T00:00:00Z");
   inicio.setUTCDate(inicio.getUTCDate() - 29);
@@ -147,7 +156,8 @@ const LINHAS_COMPARATIVO = [
     ? `<span class="muted" title="Sem guild ou sem média na faixa">—</span>`
     : `<span class="var ${m.vsGuild > 0 ? "sobe" : m.vsGuild < 0 ? "desce" : ""}"
         title="${esc(m.guild)} · ${m.faixa}: média ${num(m.mediaFaixa.media)} (${m.mediaFaixa.n} membros no top 1000)">${m.vsGuild > 0 ? "▲" : m.vsGuild < 0 ? "▼" : ""} ${pct2(Math.abs(m.vsGuild))}</span>`],
-  ["Meta de level", (m) => m.meta ? `<strong>${m.meta}</strong>` : `<span class="muted">—</span>`],
+  ["Meta de level", (m) => `<input type="number" class="meta-input" data-i="${m.i}" value="${m.meta || ""}" min="${m.atual.level + 1}"
+      max="5000" step="1" placeholder="—" aria-label="Meta de level de ${esc(m.atual.nome)}" title="Clique para editar a meta">`],
   ["Dias para a meta", (m) => !m.calc ? `<span class="muted">${m.meta ? "meta atingida" : "—"}</span>`
     : isFinite(m.calc.diasNoRitmo)
       ? `<span title="Previsão: ${dataBR(m.calc.dataEstimada)}">${num(Math.ceil(m.calc.diasNoRitmo))}</span>` : "—"],
