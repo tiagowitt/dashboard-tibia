@@ -133,7 +133,6 @@ function tabelaComparativa(membros) {
       <th>Personagem</th><th>Voc.</th><th class="num">Level</th><th class="num">XP dia</th><th class="num">XP 7d</th>
       <th class="num">XP 30d</th><th class="num">Média/dia</th><th>Faixa</th><th class="num">vs guild</th>
       <th class="num">Meta</th><th class="num">Falta</th><th class="num">Dias no ritmo</th><th class="num">Previsão</th>
-      <th class="num">XP/dia até o fim do ano</th>
     </tr></thead>
     <tbody>${membros.map((m) => {
       const a = m.atual, c = m.calc;
@@ -149,9 +148,8 @@ function tabelaComparativa(membros) {
         <td class="num">${m.meta || "—"}</td>
         ${c ? `<td class="num" title="${num(Math.round(c.falta))}">${compacto(c.falta)}</td>
           <td class="num">${isFinite(c.diasNoRitmo) ? num(Math.ceil(c.diasNoRitmo)) : "—"}</td>
-          <td class="num">${c.dataEstimada ? dataBR(c.dataEstimada) : "—"}</td>
-          <td class="num">${c.xpDiaAteFim == null ? "—" : compacto(c.xpDiaAteFim)}</td>`
-        : `<td class="num muted" colspan="4">${m.meta ? "meta atingida" : "sem meta"}</td>`}
+          <td class="num">${c.dataEstimada ? dataBR(c.dataEstimada) : "—"}</td>`
+        : `<td class="num muted" colspan="3">${m.meta ? "meta atingida" : "sem meta"}</td>`}
       </tr>`;
     }).join("")}</tbody></table>`;
 }
