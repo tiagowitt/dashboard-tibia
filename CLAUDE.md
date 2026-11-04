@@ -37,15 +37,17 @@ Repositório público (Actions ilimitado; os dados já são públicos no Tibia e
 - **Não rodar a coleta manualmente em 27/10/2026**: o dia 27/10 veio da coleta antiga das 06:01, e uma coleta à tarde o sobrescreveria com dados de outro horário (quebra o Burtantan 26/10). A primeira execução agendada é 28/10.
 - **Atenção:** o highscore da TibiaData muda ao longo do dia (não é só 1x/dia). A coleta antiga rodava sempre às ~09:01 UTC. Manter o horário fixo para os números serem comparáveis. 09:30 UTC fica depois do server save tanto no horário de verão europeu (08:00 UTC) quanto no de inverno (09:00 UTC).
 
-## Coleta (TibiaData API v4)
+## Coleta (TibiaData API v5)
+
+Migrado da v4 (4.10.0) para a **v5 (5.1.0) em 04/11/2026**: mesmos campos nos três endpoints; só mudou `BASE_TIBIADATA` em `coletor/api.py`. A API pública está em *restriction mode*: highscore por vocação (`knights`, `paladins`…) responde erro 9002 em v4 e v5 — só `all` funciona. Alternativa avaliada para top 1000 por vocação: rodar a TibiaData própria (Docker) no Actions, ainda não testada.
 
 Sempre usar sessão com retry/backoff (429/5xx), timeout e `User-Agent` próprio.
 
 | Dado | Endpoint | Observações |
 |---|---|---|
-| Highscore de XP | `https://api.tibiadata.com/v4/highscores/Collabra/experience/all/{page}` | Páginas 1 a 20 (50 por página = top 1000). Campos: rank, name, vocation, world, level, value |
-| Kill statistics | `https://api.tibiadata.com/v4/killstatistics/Collabra` | race, last_day_killed, last_day_players_killed, last_week_killed, last_week_players_killed |
-| Guilds | `https://api.tibiadata.com/v4/guild/{nome}` | "Digit One" e "Digit One Academy". Campos: name, rank, vocation, level, joined, status |
+| Highscore de XP | `https://api.tibiadata.com/v5/highscores/Collabra/experience/all/{page}` | Páginas 1 a 20 (50 por página = top 1000). Campos: rank, name, vocation, world, level, value |
+| Kill statistics | `https://api.tibiadata.com/v5/killstatistics/Collabra` | race, last_day_killed, last_day_players_killed, last_week_killed, last_week_players_killed |
+| Guilds | `https://api.tibiadata.com/v5/guild/{nome}` | "Digit One" e "Digit One Academy". Campos: name, rank, vocation, level, joined, status |
 | Bosses (semanal) | `https://tibia.fandom.com/api.php` (categorymembers) | Categorias Bane_Bosses, Archfoe_Bosses, Nemesis_Bosses → `dados/bosses.json` |
 
 Mundo e guilds devem ficar em um arquivo de configuração único, não fixos no código.

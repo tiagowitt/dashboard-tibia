@@ -7,7 +7,7 @@ import requests
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
-BASE_TIBIADATA = "https://api.tibiadata.com/v4"
+BASE_TIBIADATA = "https://api.tibiadata.com/v5"  # v5 desde 04/11/2026 (mesmos campos da v4)
 
 
 class ErroAPI(Exception):
