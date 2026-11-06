@@ -42,3 +42,8 @@ meta = 1000
 
 [bosses]
 categorias = ["Bane_Bosses", "Archfoe_Bosses", "Nemesis_Bosses"]
+
+# Site publicado (usado para conferir se a Cloudflare publicou os dados novos)
+[site]
+url = "https://dashboard-tibia.pages.dev"
+espera_minutos = 6              # quanto esperar a publicação antes de reenviar

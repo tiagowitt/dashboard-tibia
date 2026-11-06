@@ -52,6 +52,7 @@ jobs:
 
       # Mesmo se os agregados falharem, os Parquet coletados hoje precisam ser salvos.
       - name: Commitar dados
+        id: commit
         if: ${{ !cancelled() && steps.coleta.outputs.coletou != 'false' }}
         run: |
           git config user.name "github-actions[bot]"
@@ -64,6 +65,25 @@ jobs:
           git commit -m "Coleta $(TZ=America/Sao_Paulo date +%F)"
           git pull --rebase
           git push
+          echo "commitou=true" >> "$GITHUB_OUTPUT"
+
+      # A Cloudflare às vezes falha ao publicar (aconteceu em 06/11/2026). Confere no site público
+      # se os dados novos entraram no ar; se não, faz um commit de reenvio para ela tentar de novo.
+      - name: Conferir se o site publicou
+        if: ${{ !cancelled() && steps.commit.outputs.commitou == 'true' }}
+        run: |
+          for tentativa in 1 2 3; do
+            if python -m coletor.publicacao; then exit 0; fi
+            if [ "$tentativa" -eq 3 ]; then break; fi
+            echo "Reenviando para a Cloudflare (tentativa $tentativa)..."
+            echo "Reenvio $tentativa em $(date -u +%FT%TZ)" > site/dados/reenvio.txt
+            git add site/dados/reenvio.txt
+            git commit -m "Reenvio da publicação ($tentativa)"
+            git pull --rebase
+            git push
+          done
+          echo "::error::O site não publicou os dados novos depois de 2 reenvios. Veja os logs da Cloudflare Pages."
+          exit 1
 
       - name: Acusar falhas
         if: steps.coleta.outcome == 'failure' || steps.agregados.outcome == 'failure'
