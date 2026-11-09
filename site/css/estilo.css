@@ -127,6 +127,15 @@ h3 { font-size: .9rem; margin: 0 0 .5rem; font-weight: 600; }
   background: var(--superficie); border: 1px solid var(--borda); font-size: .8rem; color: var(--texto-2); white-space: nowrap;
 }
 .pilula-data::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--sobe); box-shadow: 0 0 0 3px color-mix(in srgb, var(--sobe) 20%, transparent); }
+.seletor-mundo {
+  display: inline-flex; align-items: center; gap: .3rem; padding: 0 .2rem 0 .6rem; border-radius: 999px;
+  background: var(--superficie); border: 1px solid var(--borda-forte); color: var(--texto-2);
+}
+.seletor-mundo:focus-within { border-color: var(--destaque); box-shadow: 0 0 0 3px var(--destaque-suave); }
+.seletor-mundo select {
+  border: 0; background: transparent; min-height: 32px; padding: .2rem .3rem; font-weight: 600; color: var(--texto); cursor: pointer;
+}
+.seletor-mundo select:focus { box-shadow: none; }
 .botao-icone {
   border: 1px solid var(--borda); background: var(--superficie); color: var(--texto-2);
   border-radius: 999px; width: 34px; height: 34px; min-height: 0; padding: 0; display: grid; place-items: center; cursor: pointer;
@@ -345,6 +354,7 @@ td.pos { color: var(--texto-3); width: 2.75rem; }
   .pilula-data { font-size: .75rem; }
 }
 @media (max-width: 600px) {
+  .pilula-data { display: none; }  /* no celular o espaço do topo fica para o seletor de mundo */
   body { font-size: 14px; }
   main { padding: 1.25rem 1rem 1.5rem; }
   .cartao { padding: 1rem; }

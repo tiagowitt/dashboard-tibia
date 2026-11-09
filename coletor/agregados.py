@@ -1,10 +1,10 @@
-"""Gera os JSON que o dashboard consome, a partir dos Parquet em dados/.
+"""Gera os JSON que o dashboard consome, a partir dos Parquet em dados/<mundo>/.
 
 Uso:
-    python -m coletor.agregados                    # lê dados/ e grava em site/dados/
+    python -m coletor.agregados                    # lê dados/<mundo>/ e grava em site/dados/<mundo>/
     python -m coletor.agregados --saida C:\\tmp     # grava em outra pasta (testes)
 
-Arquivos gerados:
+Arquivos gerados em site/dados/<mundo>/ (e site/dados/mundos.json com a lista de mundos):
     resumo.json              datas disponíveis, PT padrão, guild de cada membro, médias por faixa
     historico/AAAA-MM.json   uma linha por jogador e dia de referência (telas Ranking, Jogador e PT)
     guild.json               membros por dia, composição, entradas e saídas
@@ -224,39 +224,58 @@ def gerar_kills(kills: pd.DataFrame, bosses: dict) -> dict:
     }
 
 
-def gerar_tudo(pasta_dados: Path, saida: Path, cfg: dict) -> None:
-    hist = calcular_historico(ler_conjunto("ranking", pasta_dados),
-                              cfg["regras"]["dias_troca_de_dono"])
-    meses = gerar_historico(hist, saida)
+def gerar_mundo(pasta_mundo: Path, saida_mundo: Path, cfg: dict, mundo: dict,
+                bosses: dict, gerado_em: str) -> str | None:
+    """Gera os JSON de um mundo. Retorna o último dia de referência, ou None se ainda não há dados."""
+    ranking = ler_conjunto("ranking", pasta_mundo)
+    if ranking.empty:
+        print(f"  {mundo['nome']}: sem dados de ranking ainda, pulando")
+        return None
+    hist = calcular_historico(ranking, cfg["regras"]["dias_troca_de_dono"])
+    meses = gerar_historico(hist, saida_mundo)
     ultima = hist["data_ref"].max()
     hist_dia = hist[hist["data_ref"] == ultima]
-    print(f"  historico: {len(hist)} linhas em {len(meses)} meses (último dia {ultima:%Y-%m-%d})")
+    print(f"  {mundo['nome']} historico: {len(hist)} linhas em {len(meses)} meses (último dia {ultima:%Y-%m-%d})")
 
-    guild = ler_conjunto("guild", pasta_dados)
-    dados_guild, atuais = gerar_guild(guild, hist_dia, cfg)
-    _gravar_json(dados_guild, saida / "guild.json")
-    print(f"  guild: {len(atuais)} membros em {dados_guild['data']}")
+    dados_guild, atuais = gerar_guild(ler_conjunto("guild", pasta_mundo), hist_dia, cfg)
+    _gravar_json(dados_guild, saida_mundo / "guild.json")
+    print(f"  {mundo['nome']} guild: {len(atuais)} membros em {dados_guild['data']}")
 
-    bosses_json = pasta_dados / "bosses.json"
-    bosses = json.loads(bosses_json.read_text(encoding="utf-8")) if bosses_json.exists() else {}
-    dados_kills = gerar_kills(ler_conjunto("kills", pasta_dados), bosses)
-    _gravar_json(dados_kills, saida / "kills.json")
-    print(f"  kills: {len(dados_kills['nemesis_historico']['linhas'])} registros de Nemesis mortos")
+    dados_kills = gerar_kills(ler_conjunto("kills", pasta_mundo), bosses)
+    _gravar_json(dados_kills, saida_mundo / "kills.json")
+    print(f"  {mundo['nome']} kills: {len(dados_kills['nemesis_historico']['linhas'])} registros de Nemesis mortos")
 
+    data_ref = ultima.strftime("%Y-%m-%d")
     _gravar_json({
-        "gerado_em": datetime.now(timezone.utc).isoformat(timespec="seconds"),
-        "mundo": cfg["coleta"]["mundo"],
-        "guilds": cfg["coleta"]["guilds"],
-        "data_ref": ultima.strftime("%Y-%m-%d"),
+        "gerado_em": gerado_em,
+        "mundo": mundo["nome"],
+        "guilds": mundo["guilds"],
+        "data_ref": data_ref,
         "datas": sorted(hist["data_ref"].dt.strftime("%Y-%m-%d").unique().tolist()),
         "meses": meses,
         "faixas": faixas_de_level(cfg),
-        "pt_padrao": cfg["pt_padrao"],
+        "pt_padrao": mundo.get("pt_padrao", []),
         "data_meta_anual": cfg["regras"]["data_meta_anual"],
         "guild_de": dict(zip(atuais["character_name"], atuais["guild_name"])),
         "medias_faixa": medias_por_faixa(hist_dia, atuais, cfg),
-    }, saida / "resumo.json")
-    print("  resumo.json gravado")
+    }, saida_mundo / "resumo.json")
+    return data_ref
+
+
+def gerar_tudo(pasta_dados: Path, saida: Path, cfg: dict) -> None:
+    """Gera os JSON de cada mundo em saida/<mundo>/ e a lista de mundos em saida/mundos.json."""
+    gerado_em = datetime.now(timezone.utc).isoformat(timespec="seconds")
+    bosses_json = pasta_dados / "bosses.json"  # lista de bosses é a mesma para todos os mundos
+    bosses = json.loads(bosses_json.read_text(encoding="utf-8")) if bosses_json.exists() else {}
+
+    lista = []
+    for mundo in cfg["mundos"]:
+        data_ref = gerar_mundo(pasta_dados / mundo["nome"], saida / mundo["nome"], cfg, mundo, bosses, gerado_em)
+        lista.append({"nome": mundo["nome"], "guilds": mundo["guilds"], "data_ref": data_ref})
+
+    # Gravado por último: o site usa o gerado_em daqui para saber se a publicação está completa.
+    _gravar_json({"gerado_em": gerado_em, "mundos": lista}, saida / "mundos.json")
+    print(f"  mundos.json gravado ({', '.join(m['nome'] for m in lista)})")
 
 
 def main() -> int:

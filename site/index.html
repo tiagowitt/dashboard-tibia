@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Collabra XP</title>
+  <title>Tibia XP</title>
   <meta name="color-scheme" content="light dark">
   <meta name="robots" content="noindex, nofollow">
   <meta name="theme-color" content="#f6f6f4" media="(prefers-color-scheme: light)">
@@ -19,13 +19,13 @@
 <body>
   <header class="topo">
     <div class="topo-linha">
-      <a class="marca" href="#ranking" aria-label="Collabra XP — início">
+      <a class="marca" href="#ranking" aria-label="Início">
         <svg width="28" height="28" viewBox="0 0 32 32" aria-hidden="true">
           <defs><linearGradient id="logo-g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#4f97ec"/><stop offset="1" stop-color="#1c5cab"/></linearGradient></defs>
           <rect width="32" height="32" rx="9" fill="url(#logo-g)"/>
           <path d="M8 21.5l5.5-6 4 3.5L24 11" stroke="#fff" stroke-width="2.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
-        Collabra XP
+        <span>Tibia XP</span>
       </a>
       <nav class="abas" aria-label="Telas">
         <a href="#ranking" data-tela="ranking">Ranking</a>
@@ -34,6 +34,10 @@
         <a href="#guild" data-tela="guild">Guild &amp; Kills</a>
       </nav>
       <div class="topo-acoes">
+        <label class="seletor-mundo" title="Mundo">
+          <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.6 3.8 5.6 3.8 9s-1.3 6.4-3.8 9c-2.5-2.6-3.8-5.6-3.8-9S9.5 5.6 12 3z"/></g></svg>
+          <select id="sel-mundo" aria-label="Mundo"></select>
+        </label>
         <span class="pilula-data" id="info-data">carregando…</span>
         <button class="botao-icone" id="alternar-tema" type="button" aria-label="Alternar tema claro/escuro" title="Alternar tema">
           <svg class="icone-lua" viewBox="0 0 24 24" width="17" height="17" aria-hidden="true"><path fill="currentColor" d="M12 3a9 9 0 1 0 9 9c0-.46-.04-.92-.1-1.36a5.39 5.39 0 0 1-4.4 2.26 5.4 5.4 0 0 1-3.14-9.8c-.44-.06-.9-.1-1.36-.1z"/></svg>
@@ -46,7 +50,7 @@
   <main id="conteudo" tabindex="-1"></main>
 
   <footer class="rodape">
-    <span>Dados do mundo Collabra via TibiaData · atualizados todo dia às 06:30</span>
+    <span>Dados do mundo <span id="rodape-mundo"></span> via TibiaData · atualizados todo dia às 06:30</span>
     <span id="rodape-gerado"></span>
   </footer>
 

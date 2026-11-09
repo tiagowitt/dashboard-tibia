@@ -1,13 +1,14 @@
-"""Coleta diária: highscore de XP (top 1000), kill statistics e membros das guilds.
+"""Coleta diária: highscore de XP (top 1000), kill statistics e membros das guilds, de cada mundo.
 
 Uso:
-    python -m coletor.coletar                       # coleta tudo e grava em dados/
-    python -m coletor.coletar --somente ranking     # só um conjunto
+    python -m coletor.coletar                       # coleta todos os mundos e grava em dados/<mundo>/
+    python -m coletor.coletar --mundo Descubra      # só um mundo (pode repetir)
+    python -m coletor.coletar --somente ranking     # só um conjunto (pode repetir)
     python -m coletor.coletar --pasta-dados C:\\tmp  # grava em outra pasta (testes)
-    python -m coletor.coletar --so-faltantes        # só os conjuntos que ainda não têm o dia de hoje
+    python -m coletor.coletar --so-faltantes        # só o que ainda não tem o dia de hoje
 
-Cada conjunto é coletado e gravado de forma independente: se um falhar, os outros
-continuam sendo salvos, e o script termina com código 1 para o workflow acusar o erro.
+Cada conjunto de cada mundo é coletado e gravado de forma independente: se um falhar, os
+outros continuam sendo salvos, e o script termina com código 1 para o workflow acusar o erro.
 """
 
 import argparse
@@ -23,12 +24,11 @@ from coletor.armazenamento import gravar_mensal, ler_conjunto
 from coletor.config import PASTA_DADOS, carregar_config, hoje_brasilia
 
 
-def coletar_ranking(api: ClienteAPI, cfg: dict, data_extracao: date) -> pd.DataFrame:
-    mundo = cfg["coleta"]["mundo"]
+def coletar_ranking(api: ClienteAPI, cfg: dict, mundo: dict, data_extracao: date) -> pd.DataFrame:
     total_paginas = cfg["coleta"]["paginas_highscore"]
     linhas = []
     for pagina in range(1, total_paginas + 1):
-        hs = api.highscore_pagina(mundo, pagina)
+        hs = api.highscore_pagina(mundo["nome"], pagina)
         linhas.extend(hs["highscore_list"] or [])
         print(f"  highscore página {pagina}/{total_paginas}: {len(linhas)} linhas", flush=True)
 
@@ -43,8 +43,8 @@ def coletar_ranking(api: ClienteAPI, cfg: dict, data_extracao: date) -> pd.DataF
     return df[["extraction_date", "rank", "name", "vocation", "level", "value"]]
 
 
-def coletar_kills(api: ClienteAPI, cfg: dict, data_extracao: date) -> pd.DataFrame:
-    ks = api.kill_statistics(cfg["coleta"]["mundo"])
+def coletar_kills(api: ClienteAPI, cfg: dict, mundo: dict, data_extracao: date) -> pd.DataFrame:
+    ks = api.kill_statistics(mundo["nome"])
     df = pd.DataFrame(ks["entries"])
     if df.empty:
         raise ErroAPI("kill statistics vazio")
@@ -54,10 +54,12 @@ def coletar_kills(api: ClienteAPI, cfg: dict, data_extracao: date) -> pd.DataFra
                "last_week_killed", "last_week_players_killed"]]
 
 
-def coletar_guilds(api: ClienteAPI, cfg: dict, data_extracao: date) -> pd.DataFrame:
+def coletar_guilds(api: ClienteAPI, cfg: dict, mundo: dict, data_extracao: date) -> pd.DataFrame:
     partes = []
-    for nome in cfg["coleta"]["guilds"]:
+    for nome in mundo["guilds"]:
         guild = api.guild(nome)
+        if guild.get("world") and guild["world"] != mundo["nome"]:
+            raise ErroAPI(f"guild '{nome}' é do mundo {guild['world']}, não de {mundo['nome']}")
         membros = pd.DataFrame(guild["members"] or [])
         if membros.empty:
             raise ErroAPI(f"guild '{nome}' sem membros (nome errado ou guild desfeita?)")
@@ -79,10 +81,10 @@ COLETORES = {
 }
 
 
-def ja_coletados(pasta_dados: Path, data_extracao: date) -> set[str]:
-    """Conjuntos que já têm linhas com a data de extração informada."""
+def ja_coletados(pasta_mundo: Path, data_extracao: date) -> set[str]:
+    """Conjuntos do mundo que já têm linhas com a data de extração informada."""
     return {c for c in COLETORES
-            if not (df := ler_conjunto(c, pasta_dados)).empty and (df["extraction_date"] == data_extracao).any()}
+            if not (df := ler_conjunto(c, pasta_mundo)).empty and (df["extraction_date"] == data_extracao).any()}
 
 
 def avisar_workflow(**saidas) -> None:
@@ -94,45 +96,57 @@ def avisar_workflow(**saidas) -> None:
 
 
 def main() -> int:
+    cfg = carregar_config()
+    nomes_mundos = [m["nome"] for m in cfg["mundos"]]
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    parser.add_argument("--mundo", choices=nomes_mundos, action="append",
+                        help="coletar só este mundo (pode repetir)")
     parser.add_argument("--somente", choices=COLETORES, action="append",
                         help="coletar só este conjunto (pode repetir)")
     parser.add_argument("--so-faltantes", action="store_true",
-                        help="pular os conjuntos que já têm o dia de hoje (execuções de reserva)")
+                        help="pular o que já tem o dia de hoje (execuções de reserva)")
     parser.add_argument("--pasta-dados", type=Path, default=PASTA_DADOS)
     args = parser.parse_args()
 
-    cfg = carregar_config()
     api = ClienteAPI(
         user_agent=cfg["coleta"]["user_agent"],
         timeout=cfg["coleta"]["timeout_segundos"],
         tentativas=cfg["coleta"]["tentativas"],
     )
     data_extracao = hoje_brasilia()
-    print(f"Coleta de {data_extracao} (mundo {cfg['coleta']['mundo']})", flush=True)
+    mundos = [m for m in cfg["mundos"] if not args.mundo or m["nome"] in args.mundo]
+    print(f"Coleta de {data_extracao} ({', '.join(m['nome'] for m in mundos)})", flush=True)
 
-    conjuntos = list(args.somente or COLETORES)
-    if args.so_faltantes:
-        prontos = ja_coletados(args.pasta_dados, data_extracao)
-        if prontos:
-            print(f"Já coletados hoje (pulando): {', '.join(sorted(prontos))}", flush=True)
-        conjuntos = [c for c in conjuntos if c not in prontos]
-        if not conjuntos:
-            print("Nada a coletar: o dia de hoje já está completo.")
-            avisar_workflow(coletou="false")
-            return 0
+    # Plano: o que coletar em cada mundo (com --so-faltantes, pula o que já tem o dia de hoje).
+    plano = []
+    for mundo in mundos:
+        pasta = args.pasta_dados / mundo["nome"]
+        conjuntos = list(args.somente or COLETORES)
+        if args.so_faltantes:
+            prontos = ja_coletados(pasta, data_extracao)
+            if prontos:
+                print(f"{mundo['nome']}: já coletados hoje (pulando): {', '.join(sorted(prontos))}", flush=True)
+            conjuntos = [c for c in conjuntos if c not in prontos]
+        if conjuntos:
+            plano.append((mundo, pasta, conjuntos))
+
+    if not plano:
+        print("Nada a coletar: o dia de hoje já está completo em todos os mundos.")
+        avisar_workflow(coletou="false")
+        return 0
     avisar_workflow(coletou="true")
 
     falhas = []
-    for conjunto in conjuntos:
-        print(f"[{conjunto}]", flush=True)
-        try:
-            df = COLETORES[conjunto](api, cfg, data_extracao)
-            for arquivo in gravar_mensal(df, conjunto, args.pasta_dados):
-                print(f"  gravado: {arquivo}", flush=True)
-        except (ErroAPI, KeyError) as e:
-            print(f"  ERRO: {e}", file=sys.stderr, flush=True)
-            falhas.append(conjunto)
+    for mundo, pasta, conjuntos in plano:
+        for conjunto in conjuntos:
+            print(f"[{mundo['nome']} / {conjunto}]", flush=True)
+            try:
+                df = COLETORES[conjunto](api, cfg, mundo, data_extracao)
+                for arquivo in gravar_mensal(df, conjunto, pasta):
+                    print(f"  gravado: {arquivo}", flush=True)
+            except (ErroAPI, KeyError) as e:
+                print(f"  ERRO: {e}", file=sys.stderr, flush=True)
+                falhas.append(f"{mundo['nome']}/{conjunto}")
 
     if falhas:
         print(f"Falharam: {', '.join(falhas)}", file=sys.stderr)

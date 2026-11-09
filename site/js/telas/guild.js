@@ -12,14 +12,14 @@ export async function telaGuild(el, r) {
 
   el.innerHTML = `
     ${tituloTela("Guild & Kills", `Membros de ${r.guilds.map(esc).join(" e ")} e as estatísticas de mortes do mundo`)}
-    <div class="barra-filtros"><div class="controles">
+    ${r.guilds.length > 1 ? `<div class="barra-filtros"><div class="controles">
       <div class="campo">Guild
         <div class="segmentado" id="g-sel">
-          <button type="button" data-g="">Ambas</button>
+          <button type="button" data-g="">${r.guilds.length === 2 ? "Ambas" : "Todas"}</button>
           ${r.guilds.map((n) => `<button type="button" data-g="${esc(n)}">${esc(n)}</button>`).join("")}
         </div>
       </div>
-    </div></div>
+    </div></div>` : ""}
     ${g.inicio_historico === g.data ? `<div class="aviso">O histórico de guild começou em ${dataBR(g.inicio_historico)}. Membros por dia e saídas ficam completos conforme a coleta diária acumula dias.</div>` : ""}
     <div id="g-corpo"></div>
 
@@ -35,7 +35,7 @@ export async function telaGuild(el, r) {
     <div id="k-corpo"></div>`;
 
   const $ = (s) => el.querySelector(s);
-  $("#g-sel").addEventListener("click", (e) => {
+  $("#g-sel")?.addEventListener("click", (e) => {
     const b = e.target.closest("button"); if (!b) return;
     estado.guild = b.dataset.g; prefs.gravar("guild.sel", estado.guild); desenharGuild();
   });
@@ -45,6 +45,7 @@ export async function telaGuild(el, r) {
   });
 
   function desenharGuild() {
+    if (!r.guilds.includes(estado.guild)) estado.guild = "";
     el.querySelectorAll("#g-sel button").forEach((b) => b.setAttribute("aria-pressed", b.dataset.g === estado.guild));
     const sel = estado.guild;
     const filtra = (lista, campo = "guild") => (sel ? lista.filter((x) => x[campo] === sel) : lista);

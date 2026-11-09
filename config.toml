@@ -2,8 +2,6 @@
 # O coletor e os agregados leem daqui; nada disso deve ficar fixo no código.
 
 [coleta]
-mundo = "Collabra"
-guilds = ["Digit One", "Digit One Academy"]
 paginas_highscore = 20          # 50 por página = top 1000
 user_agent = "dashboard-tibia/1.0 (+https://github.com/tiagowitt/dashboard-tibia)"
 timeout_segundos = 30
@@ -19,26 +17,38 @@ primeira_ate = 199
 passo = 100
 ultima_a_partir = 2000
 
-# Personagens padrão da tela Análise PT (nome e meta de level)
-[[pt_padrao]]
+# Mundos acompanhados. O primeiro é o padrão do site.
+# Cada mundo tem suas guilds e a PT padrão da tela Análise PT (nome e meta de level).
+# Os dados ficam em dados/<mundo>/ e site/dados/<mundo>/.
+
+[[mundos]]
+nome = "Collabra"
+guilds = ["Digit One", "Digit One Academy"]
+
+[[mundos.pt_padrao]]
 nome = "Burtantan"
 meta = 800
 
-[[pt_padrao]]
+[[mundos.pt_padrao]]
 nome = "Xar Lovinhu"
 meta = 800
 
-[[pt_padrao]]
+[[mundos.pt_padrao]]
 nome = "Kelvin Klein"
 meta = 900
 
-[[pt_padrao]]
+[[mundos.pt_padrao]]
 nome = "Parametro Arda"
 meta = 900
 
-[[pt_padrao]]
+[[mundos.pt_padrao]]
 nome = "Neevez Relajado"
 meta = 1000
+
+[[mundos]]
+nome = "Descubra"
+guilds = ["Radioactive"]
+pt_padrao = []                  # sem PT padrão: monte a PT na própria tela
 
 [bosses]
 categorias = ["Bane_Bosses", "Archfoe_Bosses", "Nemesis_Bosses"]

@@ -137,12 +137,23 @@ export function linkJogador(nome) {
   return `<a href="#jogador/${encodeURIComponent(nome)}">${esc(nome)}</a>`;
 }
 
-/** Guarda/lê preferências do usuário sem quebrar em modo privado. */
+/** Mundo selecionado no topo do site (definido por app.js antes de qualquer tela). */
+export const contexto = { mundo: null, mundoPadrao: null };
+
+/**
+ * Guarda/lê preferências do usuário sem quebrar em modo privado.
+ * Cada mundo tem as suas ("Descubra:pt.lista"). No mundo padrão, se ainda não houver a chave
+ * com prefixo, usa a antiga sem prefixo — preferências salvas antes de existir o seletor.
+ */
 export const prefs = {
   ler(chave, padrao) {
-    try { const v = localStorage.getItem(chave); return v == null ? padrao : JSON.parse(v); } catch { return padrao; }
+    try {
+      let v = localStorage.getItem(`${contexto.mundo}:${chave}`);
+      if (v == null && contexto.mundo === contexto.mundoPadrao) v = localStorage.getItem(chave);
+      return v == null ? padrao : JSON.parse(v);
+    } catch { return padrao; }
   },
   gravar(chave, valor) {
-    try { localStorage.setItem(chave, JSON.stringify(valor)); } catch {}
+    try { localStorage.setItem(`${contexto.mundo}:${chave}`, JSON.stringify(valor)); } catch {}
   },
 };

@@ -66,7 +66,7 @@ PREPARAR = {"ranking": preparar_ranking, "kills": preparar_kills}
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--origem", type=Path, default=ORIGEM_PADRAO)
-    parser.add_argument("--pasta-dados", type=Path, default=PASTA_DADOS)
+    parser.add_argument("--pasta-dados", type=Path, default=PASTA_DADOS / "Collabra")  # dados antigos são do Collabra
     parser.add_argument("--forcar", action="store_true",
                         help="mesclar mesmo se já houver Parquet no destino "
                              "(em chave repetida, o dado antigo substitui o existente)")
@@ -86,7 +86,7 @@ def main() -> int:
 
     bosses = args.origem / "bosses.json"
     if bosses.exists():
-        shutil.copy2(bosses, args.pasta_dados / "bosses.json")
+        shutil.copy2(bosses, args.pasta_dados.parent / "bosses.json")  # lista compartilhada entre mundos
         print("[bosses] bosses.json copiado")
     else:
         print("[bosses] AVISO: bosses.json não encontrado na origem", file=sys.stderr)

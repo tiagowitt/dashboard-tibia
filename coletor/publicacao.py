@@ -4,7 +4,7 @@ Uso (no workflow, depois do commit):
     python -m coletor.publicacao                 # espera o gerado_em local aparecer no site
     python -m coletor.publicacao --minutos 3     # espera menos
 
-Compara o campo "gerado_em" de site/dados/resumo.json (local) com o do site no ar.
+Compara o campo "gerado_em" de site/dados/mundos.json (local, gravado por último) com o do site no ar.
 Termina com código 0 quando batem e 1 se o tempo acabar — aí o workflow reenvia.
 Só lê o site público: não precisa de token.
 """
@@ -22,14 +22,14 @@ INTERVALO_SEGUNDOS = 20
 
 
 def gerado_em_local() -> str:
-    with open(PASTA_SITE_DADOS / "resumo.json", encoding="utf-8") as f:
+    with open(PASTA_SITE_DADOS / "mundos.json", encoding="utf-8") as f:
         return json.load(f)["gerado_em"]
 
 
 def gerado_em_no_ar(url_site: str, user_agent: str) -> str | None:
-    """Lê o resumo publicado, sem cache. None se o site não respondeu direito."""
+    """Lê o índice de mundos publicado, sem cache. None se o site não respondeu direito."""
     try:
-        resp = requests.get(f"{url_site}/dados/resumo.json", params={"t": time.time_ns()},
+        resp = requests.get(f"{url_site}/dados/mundos.json", params={"t": time.time_ns()},
                             headers={"User-Agent": user_agent, "Cache-Control": "no-cache"}, timeout=20)
         resp.raise_for_status()
         return resp.json().get("gerado_em")
