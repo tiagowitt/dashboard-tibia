@@ -277,6 +277,44 @@ def gerar_kills(kills: pd.DataFrame, bosses: dict) -> dict:
     }
 
 
+COLUNAS_TROCAS = ["data", "antigo", "novo", "atual", "voc", "level", "guild", "ultimo_antigo", "primeiro_novo"]
+
+
+def gerar_trocas(bruto: pd.DataFrame, ren: pd.DataFrame, mapa: dict[str, str], hist: pd.DataFrame,
+                 guild_de: dict[str, str]) -> dict:
+    """Lista das trocas de nick para a aba do site, com datas aproximadas (dias de referência).
+
+    `bruto` é o ranking ANTES de juntar os nomes: dele saem o último dia com o nome antigo e o
+    primeiro dia com o nome novo. A troca aconteceu entre essas duas datas.
+    """
+    if ren.empty:
+        return {"colunas": COLUNAS_TROCAS, "linhas": []}
+    datas = pd.to_datetime(bruto["extraction_date"]) - pd.Timedelta(days=1)
+    por_nome = datas.groupby(bruto["name"])
+    ultimo_visto = hist.sort_values("data_ref").groupby("nome").tail(1).set_index("nome")
+    linhas = []
+    for _, x in ren.iterrows():
+        dias_antigo = por_nome.get_group(x.antigo) if x.antigo in por_nome.groups else pd.Series(dtype="datetime64[ns]")
+        dias_novo = por_nome.get_group(x.novo) if x.novo in por_nome.groups else pd.Series(dtype="datetime64[ns]")
+        ultimo_antigo = dias_antigo.max() if len(dias_antigo) else pd.NaT
+        depois = dias_novo[dias_novo > ultimo_antigo] if pd.notna(ultimo_antigo) else dias_novo
+        primeiro_novo = depois.min() if len(depois) else pd.NaT
+        atual = mapa.get(x.antigo, x.novo)
+        info = ultimo_visto.loc[atual] if atual in ultimo_visto.index else None
+        linhas.append({
+            "data": primeiro_novo if pd.notna(primeiro_novo) else ultimo_antigo,
+            "antigo": x.antigo, "novo": x.novo, "atual": atual,
+            "voc": info["voc"] if info is not None else None,
+            "level": int(info["level"]) if info is not None else None,
+            "guild": guild_de.get(atual),
+            "ultimo_antigo": ultimo_antigo, "primeiro_novo": primeiro_novo,
+        })
+    df = pd.DataFrame(linhas).sort_values(["data", "antigo"], ascending=[False, True], na_position="last")
+    for col in ("data", "ultimo_antigo", "primeiro_novo"):
+        df[col] = pd.to_datetime(df[col])
+    return {"colunas": COLUNAS_TROCAS, "linhas": _linhas(df, COLUNAS_TROCAS)}
+
+
 def gerar_mundo(pasta_mundo: Path, saida_mundo: Path, cfg: dict, mundo: dict,
                 bosses: dict, gerado_em: str) -> str | None:
     """Gera os JSON de um mundo. Retorna o último dia de referência, ou None se ainda não há dados."""
@@ -284,7 +322,9 @@ def gerar_mundo(pasta_mundo: Path, saida_mundo: Path, cfg: dict, mundo: dict,
     if ranking.empty:
         print(f"  {mundo['nome']}: sem dados de ranking ainda, pulando")
         return None
-    mapa = renomeacoes.mapa_final(renomeacoes.ler(pasta_mundo))
+    ren = renomeacoes.ler(pasta_mundo)
+    mapa = renomeacoes.mapa_final(ren)
+    bruto = ranking
     ranking = aplicar_renomeacoes(ranking, mapa, "name", ["extraction_date", "name"], maior="value")
     _gravar_json(dict(sorted(mapa.items())), saida_mundo / "renomeacoes.json")
     hist = calcular_historico(ranking, cfg["regras"]["dias_troca_de_dono"])
@@ -305,6 +345,10 @@ def gerar_mundo(pasta_mundo: Path, saida_mundo: Path, cfg: dict, mundo: dict,
     dados_guild, atuais = gerar_guild(guild, hist_dia, cfg)
     _gravar_json(dados_guild, saida_mundo / "guild.json")
     print(f"  {mundo['nome']} guild: {len(atuais)} membros em {dados_guild['data']}")
+
+    trocas = gerar_trocas(bruto, ren, mapa, hist, dict(zip(atuais["character_name"], atuais["guild_name"])))
+    _gravar_json(trocas, saida_mundo / "trocas.json")
+    print(f"  {mundo['nome']} trocas de nick: {len(trocas['linhas'])}")
 
     dados_kills = gerar_kills(ler_conjunto("kills", pasta_mundo), bosses)
     _gravar_json(dados_kills, saida_mundo / "kills.json")

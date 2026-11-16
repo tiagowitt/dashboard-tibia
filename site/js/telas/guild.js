@@ -1,4 +1,4 @@
-// Tela 4 — Guild & Kills: membros, composição, médias por faixa, entradas/saídas e estatísticas de mortes.
+// Tela 4 — Guild & Kills: membros, composição, médias por faixa, entradas/saídas, trocas de nick e estatísticas de mortes.
 import * as dados from "../dados.js";
 import { barras, grafico, legendaHTML, linha, rotulosDatas } from "../graficos.js";
 import {
@@ -6,9 +6,12 @@ import {
 } from "../util.js";
 
 export async function telaGuild(el, r) {
-  const [g, k] = await Promise.all([dados.guild(), dados.kills()]);
+  const [g, k, trocas] = await Promise.all([dados.guild(), dados.kills(), dados.trocas()]);
   const membros = dados.tabela(g.membros);
-  const estado = { guild: prefs.ler("guild.sel", ""), periodo: prefs.ler("kills.periodo", "7") };
+  const estado = {
+    guild: prefs.ler("guild.sel", ""), periodo: prefs.ler("kills.periodo", "7"),
+    trocasEscopo: prefs.ler("trocas.escopo", "guild"), trocasBusca: "", trocasLimite: 30,
+  };
 
   el.innerHTML = `
     ${tituloTela("Guild & Kills", `Membros de ${r.guilds.map(esc).join(" e ")} e as estatísticas de mortes do mundo`)}
@@ -22,6 +25,23 @@ export async function telaGuild(el, r) {
     </div></div>` : ""}
     ${g.inicio_historico === g.data ? `<div class="aviso">O histórico de guild começou em ${dataBR(g.inicio_historico)}. Membros por dia e saídas ficam completos conforme a coleta diária acumula dias.</div>` : ""}
     <div id="g-corpo"></div>
+
+    <h2 class="secao">Trocas de nick</h2>
+    <div class="controles">
+      <div class="campo">Mostrar
+        <div class="segmentado" id="t-escopo">
+          <button type="button" data-e="guild">${r.guilds.length > 1 ? "Das guilds" : "Da guild"}</button>
+          <button type="button" data-e="mundo">Todo o top 1000</button>
+        </div>
+      </div>
+      <label class="campo" style="flex:1 1 14rem">Buscar
+        <input id="t-busca" type="search" placeholder="Nome antigo ou novo" autocomplete="off">
+      </label>
+    </div>
+    <div class="cartao">
+      <div class="cartao-cab"><h2 id="t-titulo"></h2><span class="muted">confirmadas pelos nomes anteriores na TibiaData</span></div>
+      <div class="tabela-rolagem" id="t-tabela"></div>
+    </div>
 
     <h2 class="secao">Kill statistics</h2>
     <div class="controles">
@@ -37,12 +57,49 @@ export async function telaGuild(el, r) {
   const $ = (s) => el.querySelector(s);
   $("#g-sel")?.addEventListener("click", (e) => {
     const b = e.target.closest("button"); if (!b) return;
-    estado.guild = b.dataset.g; prefs.gravar("guild.sel", estado.guild); desenharGuild();
+    estado.guild = b.dataset.g; prefs.gravar("guild.sel", estado.guild); desenharGuild(); desenharTrocas();
+  });
+  $("#t-escopo").addEventListener("click", (e) => {
+    const b = e.target.closest("button"); if (!b) return;
+    estado.trocasEscopo = b.dataset.e; prefs.gravar("trocas.escopo", estado.trocasEscopo);
+    estado.trocasLimite = 30; desenharTrocas();
+  });
+  let espera;
+  $("#t-busca").addEventListener("input", (e) => {
+    clearTimeout(espera);
+    espera = setTimeout(() => { estado.trocasBusca = e.target.value; estado.trocasLimite = 30; desenharTrocas(); }, 150);
   });
   $("#k-periodo").addEventListener("click", (e) => {
     const b = e.target.closest("button"); if (!b) return;
     estado.periodo = b.dataset.p; prefs.gravar("kills.periodo", estado.periodo); desenharKills();
   });
+
+  // Trocas de nick: segue o filtro de guild da tela ("Das guilds") ou mostra o mundo todo.
+  function desenharTrocas() {
+    el.querySelectorAll("#t-escopo button").forEach((b) => b.setAttribute("aria-pressed", b.dataset.e === estado.trocasEscopo));
+    const daGuild = (t) => (estado.guild ? t.guild === estado.guild : r.guilds.includes(t.guild));
+    const busca = estado.trocasBusca.trim().toLowerCase();
+    let lista = estado.trocasEscopo === "guild" ? trocas.filter(daGuild) : trocas;
+    if (busca) lista = lista.filter((t) => [t.antigo, t.novo, t.atual].some((n) => n.toLowerCase().includes(busca)));
+    const onde = estado.trocasEscopo === "guild" ? (estado.guild || r.guilds.join(" e ")) : `top 1000 de ${r.mundo}`;
+    $("#t-titulo").textContent = `${num(lista.length)} ${lista.length === 1 ? "troca" : "trocas"} · ${onde}`;
+    if (!lista.length) {
+      $("#t-tabela").innerHTML = `<p class="vazio">Nenhuma troca de nick encontrada.</p>`;
+      return;
+    }
+    $("#t-tabela").innerHTML = `<table>
+      <thead><tr><th class="centro">Data</th><th>Nome antigo</th><th>Nome novo</th><th class="centro">Voc.</th>
+        <th class="num">Level</th><th>Guild atual</th></tr></thead>
+      <tbody>${lista.slice(0, estado.trocasLimite).map((t) => `<tr>
+        <td class="centro" title="${t.ultimo_antigo ? `Último dia como ${esc(t.antigo)}: ${dataBR(t.ultimo_antigo)}` : ""}${t.primeiro_novo ? ` · primeiro como ${esc(t.novo)}: ${dataBR(t.primeiro_novo)}` : ""}">${dataBR(t.data)}</td>
+        <td class="muted">${esc(t.antigo)}</td>
+        <td>${linkJogador(t.atual)}${t.novo !== t.atual ? ` <span class="muted">(depois ${esc(t.novo)})</span>` : ""}</td>
+        <td class="centro">${vocHTML(t.voc)}</td><td class="num">${t.level ?? "—"}</td>
+        <td class="muted">${esc(t.guild ?? "")}</td></tr>`).join("")}
+      </tbody></table>
+      ${lista.length > estado.trocasLimite ? `<p style="text-align:center;margin:1rem 0 0"><button type="button" id="t-mais">Mostrar mais (${num(lista.length - estado.trocasLimite)} restantes)</button></p>` : ""}`;
+    $("#t-mais")?.addEventListener("click", () => { estado.trocasLimite += 30; desenharTrocas(); });
+  }
 
   function desenharGuild() {
     if (!r.guilds.includes(estado.guild)) estado.guild = "";
@@ -172,6 +229,7 @@ export async function telaGuild(el, r) {
   }
 
   desenharGuild();
+  desenharTrocas();
   desenharKills();
 }
 

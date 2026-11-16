@@ -43,6 +43,9 @@ export async function renomeacoes() {
   return renomeados.get(chave);
 }
 
+/** Lista das trocas de nick do mundo (mais recentes primeiro). Vazia se não houver arquivo. */
+export const trocas = () => doMundo("trocas.json").then(tabela).catch(() => []);
+
 /**
  * Situação de cada personagem visto nos últimos 30 dias, calculada na data de referência
  * (quem saiu do top tem XP do dia 0 e janelas de 7/30 dias que só somam o que caiu nelas).

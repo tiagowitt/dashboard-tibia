@@ -34,6 +34,7 @@ Repositório público (Actions ilimitado; os dados já são públicos no Tibia e
 - Roda na coleta diária logo depois do ranking de cada mundo (`detectar_do_dia`; falha só gera aviso). Checagem do histórico inteiro (uso único, ~15 min): `python -m coletor.renomeacoes`.
 - Agregados juntam o histórico: `aplicar_renomeacoes` troca nomes antigos pelo atual (cadeias A→B→C resolvidas em `mapa_final`) no ranking e na guild, antes dos cálculos — XP do dia da troca é a real, não 0. `site/dados/<mundo>/renomeacoes.json` (antigo → atual) faz a Análise PT trocar o nome sozinha (meta mantida) e a tela Jogador abrir o personagem atual.
 - Caso que originou: Xar Lovinhu → **Raz Comportado** (04/11/2026, confirmado por `former_names`).
+- Tela Guild & Kills tem a seção **"Trocas de nick"** (pedido de 16/11/2026: seção, não aba): `site/dados/<mundo>/trocas.json` (`gerar_trocas`), com data aproximada da troca (primeiro dia com o nome novo depois do último com o antigo), nome antigo, nome novo/atual, voc, level e guild atual; filtro "Das guilds" (segue o seletor de guild da tela) ou "Todo o top 1000", e busca.
 
 ## Decisões de implementação (27/10/2026)
 
