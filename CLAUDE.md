@@ -98,6 +98,8 @@ Origem: repositório antigo (público), clonar com `git clone --depth 1 https://
 - A planilha "Controle PT 22h" fica sem Apps Script no novo fluxo: arquivar a implantação dela também.
 - **27/10/2026:** o Tiago arquivou as implantações do Apps Script das duas planilhas. Ainda falta apagar a planilha principal (opcional, ela não é mais usada).
 
+- **16/11/2026:** o repositório antigo ainda rodava todo dia (coleta + envio ao BigQuery, ou seja, a `GCP_SA_KEY` dele segue válida) e o "bosses semanal" falhava todo sábado — eram esses os e-mails de falha do GitHub. **Todos os workflows dele foram removidos** (commit `b61d0dd` no repositório antigo, apagando `.github/workflows/`). No mesmo dia o disparo das 06:30 do cron-job.org não chegou ao GitHub; a coleta foi rodada manualmente às 07:20 de Brasília (commit "Coleta 2026-11-16 (manual…)").
+
 Limpeza final, depois que o projeto novo rodar com sucesso por alguns dias:
 1. Apagar o repositório `tiagowitt/tibia-dados-dashboard`.
 2. No Google Cloud (projeto `tibia-analytics`): apagar a chave JSON da service account, ou o projeto inteiro.
