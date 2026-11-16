@@ -10,7 +10,7 @@ export async function telaGuild(el, r) {
   const membros = dados.tabela(g.membros);
   const estado = {
     guild: prefs.ler("guild.sel", ""), periodo: prefs.ler("kills.periodo", "7"),
-    trocasEscopo: prefs.ler("trocas.escopo", "guild"), trocasBusca: "", trocasLimite: 30,
+    trocasEscopo: prefs.ler("trocas.escopo", "guild"), trocasBusca: "",
   };
 
   el.innerHTML = `
@@ -40,7 +40,7 @@ export async function telaGuild(el, r) {
     </div>
     <div class="cartao">
       <div class="cartao-cab"><h2 id="t-titulo"></h2><span class="muted">confirmadas pelos nomes anteriores na TibiaData</span></div>
-      <div class="tabela-rolagem" id="t-tabela"></div>
+      <div class="tabela-rolagem" id="t-tabela" style="max-height:480px"></div>
     </div>
 
     <h2 class="secao">Kill statistics</h2>
@@ -62,12 +62,12 @@ export async function telaGuild(el, r) {
   $("#t-escopo").addEventListener("click", (e) => {
     const b = e.target.closest("button"); if (!b) return;
     estado.trocasEscopo = b.dataset.e; prefs.gravar("trocas.escopo", estado.trocasEscopo);
-    estado.trocasLimite = 30; desenharTrocas();
+    desenharTrocas();
   });
   let espera;
   $("#t-busca").addEventListener("input", (e) => {
     clearTimeout(espera);
-    espera = setTimeout(() => { estado.trocasBusca = e.target.value; estado.trocasLimite = 30; desenharTrocas(); }, 150);
+    espera = setTimeout(() => { estado.trocasBusca = e.target.value; desenharTrocas(); }, 150);
   });
   $("#k-periodo").addEventListener("click", (e) => {
     const b = e.target.closest("button"); if (!b) return;
@@ -90,15 +90,14 @@ export async function telaGuild(el, r) {
     $("#t-tabela").innerHTML = `<table>
       <thead><tr><th class="centro">Data</th><th>Nome antigo</th><th>Nome novo</th><th class="centro">Voc.</th>
         <th class="num">Level</th><th>Guild atual</th></tr></thead>
-      <tbody>${lista.slice(0, estado.trocasLimite).map((t) => `<tr>
+      <tbody>${lista.map((t) => `<tr>
         <td class="centro" title="${t.ultimo_antigo ? `Último dia como ${esc(t.antigo)}: ${dataBR(t.ultimo_antigo)}` : ""}${t.primeiro_novo ? ` · primeiro como ${esc(t.novo)}: ${dataBR(t.primeiro_novo)}` : ""}">${dataBR(t.data)}</td>
         <td class="muted">${esc(t.antigo)}</td>
-        <td>${linkJogador(t.atual)}${t.novo !== t.atual ? ` <span class="muted">(depois ${esc(t.novo)})</span>` : ""}</td>
+        <td>${t.novo === t.atual ? linkJogador(t.atual)
+          : `<strong>${esc(t.novo)}</strong> <span class="muted">(hoje ${linkJogador(t.atual)})</span>`}</td>
         <td class="centro">${vocHTML(t.voc)}</td><td class="num">${t.level ?? "—"}</td>
         <td class="muted">${esc(t.guild ?? "")}</td></tr>`).join("")}
-      </tbody></table>
-      ${lista.length > estado.trocasLimite ? `<p style="text-align:center;margin:1rem 0 0"><button type="button" id="t-mais">Mostrar mais (${num(lista.length - estado.trocasLimite)} restantes)</button></p>` : ""}`;
-    $("#t-mais")?.addEventListener("click", () => { estado.trocasLimite += 30; desenharTrocas(); });
+      </tbody></table>`;
   }
 
   function desenharGuild() {

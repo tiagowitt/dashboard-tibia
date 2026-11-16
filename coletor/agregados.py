@@ -280,38 +280,48 @@ def gerar_kills(kills: pd.DataFrame, bosses: dict) -> dict:
 COLUNAS_TROCAS = ["data", "antigo", "novo", "atual", "voc", "level", "guild", "ultimo_antigo", "primeiro_novo"]
 
 
-def gerar_trocas(bruto: pd.DataFrame, ren: pd.DataFrame, mapa: dict[str, str], hist: pd.DataFrame,
+def gerar_trocas(bruto: pd.DataFrame, mapa: dict[str, str], hist: pd.DataFrame,
                  guild_de: dict[str, str]) -> dict:
-    """Lista das trocas de nick para a aba do site, com datas aproximadas (dias de referência).
+    """Lista das trocas de nick para o site, uma linha por troca real (nome a nome).
 
-    `bruto` é o ranking ANTES de juntar os nomes: dele saem o último dia com o nome antigo e o
-    primeiro dia com o nome novo. A troca aconteceu entre essas duas datas.
+    Para cada personagem, junta as aparições de todos os seus nomes (do `bruto`, ranking ANTES de
+    juntar os nomes) em ordem de data: cada vez que o nome muda de uma aparição para a seguinte é
+    uma troca. Isso dá a sequência certa mesmo com idas e voltas (Arraya → Sandroblade → Arraya).
+    Datas em dias de referência: a troca aconteceu entre `ultimo_antigo` e `primeiro_novo`.
     """
-    if ren.empty:
+    if not mapa:
         return {"colunas": COLUNAS_TROCAS, "linhas": []}
-    datas = pd.to_datetime(bruto["extraction_date"]) - pd.Timedelta(days=1)
-    por_nome = datas.groupby(bruto["name"])
+    grupo = bruto["name"].map(lambda n: mapa.get(n, n))
+    aparicoes = pd.DataFrame({
+        "atual": grupo, "nome": bruto["name"],
+        "data": pd.to_datetime(bruto["extraction_date"]) - pd.Timedelta(days=1),
+    })[grupo.isin(set(mapa.values()))].sort_values(["atual", "data"])
     ultimo_visto = hist.sort_values("data_ref").groupby("nome").tail(1).set_index("nome")
+
     linhas = []
-    for _, x in ren.iterrows():
-        dias_antigo = por_nome.get_group(x.antigo) if x.antigo in por_nome.groups else pd.Series(dtype="datetime64[ns]")
-        dias_novo = por_nome.get_group(x.novo) if x.novo in por_nome.groups else pd.Series(dtype="datetime64[ns]")
-        ultimo_antigo = dias_antigo.max() if len(dias_antigo) else pd.NaT
-        depois = dias_novo[dias_novo > ultimo_antigo] if pd.notna(ultimo_antigo) else dias_novo
-        primeiro_novo = depois.min() if len(depois) else pd.NaT
-        atual = mapa.get(x.antigo, x.novo)
+    for atual, ap in aparicoes.groupby("atual"):
         info = ultimo_visto.loc[atual] if atual in ultimo_visto.index else None
-        linhas.append({
-            "data": primeiro_novo if pd.notna(primeiro_novo) else ultimo_antigo,
-            "antigo": x.antigo, "novo": x.novo, "atual": atual,
-            "voc": info["voc"] if info is not None else None,
-            "level": int(info["level"]) if info is not None else None,
-            "guild": guild_de.get(atual),
-            "ultimo_antigo": ultimo_antigo, "primeiro_novo": primeiro_novo,
-        })
-    df = pd.DataFrame(linhas).sort_values(["data", "antigo"], ascending=[False, True], na_position="last")
+        anterior = ap.shift()
+        mudou = ap[anterior["nome"].notna() & (ap["nome"] != anterior["nome"])]
+        trocas = [(anterior.loc[i, "nome"], x["nome"], anterior.loc[i, "data"], x["data"]) for i, x in mudou.iterrows()]
+        # Trocou para o nome atual sem ter voltado ao top com ele: data da troca desconhecida.
+        if ap["nome"].iloc[-1] != atual:
+            trocas.append((ap["nome"].iloc[-1], atual, ap["data"].iloc[-1], pd.NaT))
+        for antigo, novo, ultimo_antigo, primeiro_novo in trocas:
+            linhas.append({
+                "data": primeiro_novo if pd.notna(primeiro_novo) else ultimo_antigo,
+                "antigo": antigo, "novo": novo, "atual": atual,
+                "voc": info["voc"] if info is not None else None,
+                "level": int(info["level"]) if info is not None else None,
+                "guild": guild_de.get(atual),
+                "ultimo_antigo": ultimo_antigo, "primeiro_novo": primeiro_novo,
+            })
+    if not linhas:
+        return {"colunas": COLUNAS_TROCAS, "linhas": []}
+    df = pd.DataFrame(linhas)
     for col in ("data", "ultimo_antigo", "primeiro_novo"):
         df[col] = pd.to_datetime(df[col])
+    df = df.sort_values(["data", "antigo"], ascending=[False, True], na_position="last")
     return {"colunas": COLUNAS_TROCAS, "linhas": _linhas(df, COLUNAS_TROCAS)}
 
 
@@ -322,8 +332,7 @@ def gerar_mundo(pasta_mundo: Path, saida_mundo: Path, cfg: dict, mundo: dict,
     if ranking.empty:
         print(f"  {mundo['nome']}: sem dados de ranking ainda, pulando")
         return None
-    ren = renomeacoes.ler(pasta_mundo)
-    mapa = renomeacoes.mapa_final(ren)
+    mapa = renomeacoes.mapa_final(renomeacoes.ler(pasta_mundo))
     bruto = ranking
     ranking = aplicar_renomeacoes(ranking, mapa, "name", ["extraction_date", "name"], maior="value")
     _gravar_json(dict(sorted(mapa.items())), saida_mundo / "renomeacoes.json")
@@ -346,7 +355,7 @@ def gerar_mundo(pasta_mundo: Path, saida_mundo: Path, cfg: dict, mundo: dict,
     _gravar_json(dados_guild, saida_mundo / "guild.json")
     print(f"  {mundo['nome']} guild: {len(atuais)} membros em {dados_guild['data']}")
 
-    trocas = gerar_trocas(bruto, ren, mapa, hist, dict(zip(atuais["character_name"], atuais["guild_name"])))
+    trocas = gerar_trocas(bruto, mapa, hist, dict(zip(atuais["character_name"], atuais["guild_name"])))
     _gravar_json(trocas, saida_mundo / "trocas.json")
     print(f"  {mundo['nome']} trocas de nick: {len(trocas['linhas'])}")
 
