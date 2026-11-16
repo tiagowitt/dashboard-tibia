@@ -22,6 +22,7 @@ import pandas as pd
 from coletor.api import ClienteAPI, ErroAPI
 from coletor.armazenamento import gravar_mensal, ler_conjunto
 from coletor.config import PASTA_DADOS, carregar_config, hoje_brasilia
+from coletor.renomeacoes import detectar_do_dia
 
 
 def coletar_ranking(api: ClienteAPI, cfg: dict, mundo: dict, data_extracao: date) -> pd.DataFrame:
@@ -144,6 +145,12 @@ def main() -> int:
                 df = COLETORES[conjunto](api, cfg, mundo, data_extracao)
                 for arquivo in gravar_mensal(df, conjunto, pasta):
                     print(f"  gravado: {arquivo}", flush=True)
+                if conjunto == "ranking":
+                    # Troca de nick: só complementa os dados, então uma falha aqui não derruba a coleta.
+                    try:
+                        detectar_do_dia(api, mundo["nome"], pasta, data_extracao)
+                    except Exception as e:  # noqa: BLE001
+                        print(f"  aviso: checagem de troca de nick falhou: {e}", file=sys.stderr, flush=True)
             except (ErroAPI, KeyError) as e:
                 print(f"  ERRO: {e}", file=sys.stderr, flush=True)
                 falhas.append(f"{mundo['nome']}/{conjunto}")

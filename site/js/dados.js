@@ -31,6 +31,18 @@ export const resumo = () => doMundo("resumo.json");
 export const guild = () => doMundo("guild.json");
 export const kills = () => doMundo("kills.json");
 
+/** Trocas de nick do mundo: mapa nome antigo (minúsculas) → nome atual. Vazio se não houver arquivo. */
+const renomeados = new Map();
+export async function renomeacoes() {
+  const chave = contexto.mundo;
+  if (!renomeados.has(chave)) {
+    renomeados.set(chave, doMundo("renomeacoes.json")
+      .then((m) => new Map(Object.entries(m).map(([antigo, novo]) => [antigo.toLowerCase(), novo])))
+      .catch(() => new Map()));
+  }
+  return renomeados.get(chave);
+}
+
 /**
  * Situação de cada personagem visto nos últimos 30 dias, calculada na data de referência
  * (quem saiu do top tem XP do dia 0 e janelas de 7/30 dias que só somam o que caiu nelas).

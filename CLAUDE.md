@@ -28,6 +28,13 @@ Repositório público (Actions ilimitado; os dados já são públicos no Tibia e
 - **Histórico do Descubra começa em 09/11/2026** (coleta manual às ~09h de Brasília; dia de referência 08/11). A TibiaData só dá o dia atual e o repositório antigo só tinha Descubra até jan/2026. O 1º dia tem XP 0 para todos; 7 e 30 dias se completam com o tempo (o site mostra um aviso enquanto o mundo tiver menos de 30 dias).
 - Site: seletor de mundo no topo (`#sel-mundo`, lembrado em `localStorage` "mundo"); título da aba = "<mundo> XP", marca "Tibia XP". Preferências gravadas com prefixo do mundo (`Descubra:pt.lista`); no mundo padrão, sem a chave com prefixo, lê a antiga sem prefixo (preferências de antes do seletor). Tela Guild esconde o seletor de guild quando o mundo tem uma só.
 
+## Troca de nick (desde 16/11/2026)
+
+- `coletor/renomeacoes.py`: cada nome que aparece **pela primeira vez** no top é pesquisado em `GET /v5/character/{nome}`; se o personagem (do mesmo mundo) tem `former_names` que existem no nosso histórico, registra `data, antigo, novo` em `dados/<mundo>/renomeacoes.csv`. Pesquisar um nome antigo na API devolve o personagem com o nome atual. **Sem chute por level/XP**: testado em 16/11, a regra só pelos dados acertou 38 de 72 casos (erra muito perto do corte do top, level ~450).
+- Roda na coleta diária logo depois do ranking de cada mundo (`detectar_do_dia`; falha só gera aviso). Checagem do histórico inteiro (uso único, ~15 min): `python -m coletor.renomeacoes`.
+- Agregados juntam o histórico: `aplicar_renomeacoes` troca nomes antigos pelo atual (cadeias A→B→C resolvidas em `mapa_final`) no ranking e na guild, antes dos cálculos — XP do dia da troca é a real, não 0. `site/dados/<mundo>/renomeacoes.json` (antigo → atual) faz a Análise PT trocar o nome sozinha (meta mantida) e a tela Jogador abrir o personagem atual.
+- Caso que originou: Xar Lovinhu → **Raz Comportado** (04/11/2026, confirmado por `former_names`).
+
 ## Decisões de implementação (27/10/2026)
 
 - **Python 3.13** em `.venv` (criado com `py -3.13 -m venv .venv`; o `python` do PATH do Tiago é 3.11). Rodar módulos com `.venv\Scripts\python -m coletor.coletar`.

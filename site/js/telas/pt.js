@@ -10,6 +10,13 @@ const MAXIMO = 7;
 
 export async function telaPT(el, r) {
   let lista = prefs.ler("pt.lista", null) ?? r.pt_padrao.map((p) => ({ ...p }));
+  // Quem trocou de nick passa a aparecer com o nome atual (a meta continua a mesma).
+  const renomeados = await dados.renomeacoes();
+  const atualizada = lista.map((p) => ({ ...p, nome: renomeados.get(p.nome.toLowerCase()) ?? p.nome }));
+  if (atualizada.some((p, i) => p.nome !== lista[i].nome)) {
+    lista = atualizada;
+    prefs.gravar("pt.lista", lista);
+  }
   const ultimoMes = await dados.mes(r.meses.at(-1));
   const nomes = [...new Set(ultimoMes.map((l) => l.nome))].sort();
 

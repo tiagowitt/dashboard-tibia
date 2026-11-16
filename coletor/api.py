@@ -59,3 +59,30 @@ class ClienteAPI:
     def guild(self, nome: str) -> dict:
         url = f"{BASE_TIBIADATA}/guild/{quote(nome)}"
         return self.get_json(url)["guild"]
+
+    def personagem(self, nome: str) -> dict | None:
+        """Dados do personagem (name, world, former_names...), ou None se o nome não existe.
+
+        Pesquisar um nome antigo devolve o personagem com o nome atual: é assim que se
+        descobre uma troca de nick (o nome antigo aparece em former_names).
+        """
+        url = f"{BASE_TIBIADATA}/character/{quote(nome)}"
+        try:
+            resp = self.sessao.get(url, timeout=self.timeout)
+        except requests.RequestException as e:
+            raise ErroAPI(f"{url}: {e}") from e
+        finally:
+            time.sleep(self.pausa)
+        if resp.status_code == 404:
+            return None
+        try:
+            resp.raise_for_status()
+            dados = resp.json()
+        except (requests.RequestException, ValueError) as e:
+            raise ErroAPI(f"{url}: {e}") from e
+        status = dados.get("information", {}).get("status", {})
+        if status.get("http_code", 200) == 404:
+            return None
+        if status.get("http_code", 200) != 200:
+            raise ErroAPI(f"{url}: {status}")
+        return dados["character"]["character"]

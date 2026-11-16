@@ -29,6 +29,7 @@ import pandas as pd
 
 from coletor.armazenamento import ler_conjunto
 from coletor.config import PASTA_DADOS, PASTA_SITE_DADOS, carregar_config
+from coletor import renomeacoes
 
 SIGLAS_VOCACAO = {
     "Elite Knight": "EK", "Knight": "EK",
@@ -89,6 +90,21 @@ def calcular_historico(ranking: pd.DataFrame, dias_troca_de_dono: int) -> pd.Dat
 
     df["voc"] = df["vocation"].map(SIGLAS_VOCACAO).fillna("-")
     return df.rename(columns={"name": "nome", "value": "xp"})
+
+
+def aplicar_renomeacoes(df: pd.DataFrame, mapa: dict[str, str], coluna: str, chave: list[str],
+                        maior: str | None = None) -> pd.DataFrame:
+    """Troca nomes antigos pelo atual, para o histórico de quem trocou de nick seguir num nome só.
+
+    Se no mesmo dia aparecerem os dois nomes (não deveria), fica uma linha só: a de maior `maior`.
+    """
+    if df.empty or not mapa:
+        return df
+    df = df.copy()
+    df[coluna] = df[coluna].replace(mapa)
+    if maior:
+        df = df.sort_values(maior, ascending=False)
+    return df.drop_duplicates(chave, keep="first")
 
 
 COLUNAS_ATUAL = ["nome", "voc", "level", "xp", "visto_em", "xp_dia", "xp_7", "xp_30", "lv_30", "rank", "var_rank"]
@@ -268,6 +284,9 @@ def gerar_mundo(pasta_mundo: Path, saida_mundo: Path, cfg: dict, mundo: dict,
     if ranking.empty:
         print(f"  {mundo['nome']}: sem dados de ranking ainda, pulando")
         return None
+    mapa = renomeacoes.mapa_final(renomeacoes.ler(pasta_mundo))
+    ranking = aplicar_renomeacoes(ranking, mapa, "name", ["extraction_date", "name"], maior="value")
+    _gravar_json(dict(sorted(mapa.items())), saida_mundo / "renomeacoes.json")
     hist = calcular_historico(ranking, cfg["regras"]["dias_troca_de_dono"])
     meses = gerar_historico(hist, saida_mundo)
     ultima = hist["data_ref"].max()
@@ -281,7 +300,9 @@ def gerar_mundo(pasta_mundo: Path, saida_mundo: Path, cfg: dict, mundo: dict,
     print(f"  {mundo['nome']} atual: {len(atual)} nomes vistos nos últimos 30 dias "
           f"({int((atual['visto_em'] < ultima.strftime('%Y-%m-%d')).sum())} fora do top no último dia)")
 
-    dados_guild, atuais = gerar_guild(ler_conjunto("guild", pasta_mundo), hist_dia, cfg)
+    guild = aplicar_renomeacoes(ler_conjunto("guild", pasta_mundo), mapa, "character_name",
+                                ["extraction_date", "guild_name", "character_name"])
+    dados_guild, atuais = gerar_guild(guild, hist_dia, cfg)
     _gravar_json(dados_guild, saida_mundo / "guild.json")
     print(f"  {mundo['nome']} guild: {len(atuais)} membros em {dados_guild['data']}")
 

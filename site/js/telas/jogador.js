@@ -9,7 +9,9 @@ const PERIODOS = [[30, "30 dias"], [90, "90 dias"], [180, "180 dias"], [9999, "T
 
 export async function telaJogador(el, r, nomeRota) {
   const nomesRecentes = [...new Set((await dados.mes(r.meses.at(-1))).map((l) => l.nome))].sort();
-  const nome = nomeRota || prefs.ler("jogador.ultimo", "");
+  // Nome antigo (troca de nick) abre o personagem com o nome atual.
+  const pedido = nomeRota || prefs.ler("jogador.ultimo", "");
+  const nome = (await dados.renomeacoes()).get(pedido.toLowerCase()) ?? pedido;
   const dias = prefs.ler("jogador.dias", 90);
 
   el.innerHTML = `
