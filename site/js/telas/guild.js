@@ -2,7 +2,7 @@
 import * as dados from "../dados.js";
 import { barras, grafico, legendaHTML, linha, rotulosDatas } from "../graficos.js";
 import {
-  barraHTML, compacto, cor, corSerie, corVocacao, dataBR, esc, kpi, linkJogador, num, prefs, tituloTela, vocHTML, VOCACOES, NOMES_VOCACAO,
+  barraHTML, compacto, cor, corSerie, corVocacao, dataBR, dataCurta, esc, kpi, linkJogador, num, prefs, tituloTela, vocHTML, VOCACOES, NOMES_VOCACAO,
 } from "../util.js";
 
 export async function telaGuild(el, r) {
@@ -140,7 +140,7 @@ export async function telaGuild(el, r) {
         <div class="cartao"><h2>Entradas nos últimos 30 dias</h2>
           <div class="tabela-rolagem" style="max-height:360px">${tabelaPessoas(entradas, "data", "Entrou", !sel)}</div></div>
         <div class="cartao"><h2>Saídas nos últimos 30 dias</h2>
-          <div class="tabela-rolagem" style="max-height:360px">${tabelaPessoas(saidas, "visto_por_ultimo", "Visto por último", !sel)}</div></div>
+          <div class="tabela-rolagem" style="max-height:360px">${tabelaPessoas(saidas, "visto_por_ultimo", "Saiu", !sel)}</div></div>
       </div>
       <div class="cartao">
         <h2>Membros (${num(ms.length)})</h2>
@@ -247,11 +247,14 @@ function listaTop(itens, rotNome, rotValor, capitalizar = false) {
   </tbody></table>`;
 }
 
+// Entradas/saídas: enxuta para caber sem rolagem lateral — guild como linha pequena sob o nome
+// (só quando a tela mostra as duas guilds) e data curta (é sempre dos últimos 30 dias).
 function tabelaPessoas(lista, campoData, rotData, mostrarGuild) {
   if (!lista.length) return `<p class="vazio">Nenhum registro.</p>`;
-  return `<table><thead><tr><th>Personagem</th>${mostrarGuild ? "<th>Guild</th>" : ""}<th class="centro">Voc.</th><th class="num">Level</th><th class="num">${rotData}</th></tr></thead><tbody>
-    ${lista.map((p) => `<tr><td>${linkJogador(p.nome)}</td>${mostrarGuild ? `<td class="muted">${esc(p.guild)}</td>` : ""}
-      <td class="centro">${vocHTML(p.voc)}</td><td class="num">${p.level}</td><td class="num">${dataBR(p[campoData])}</td></tr>`).join("")}
+  return `<table class="compacta"><thead><tr><th>Personagem</th><th class="centro">Voc.</th><th class="num">Level</th><th class="num">${rotData}</th></tr></thead><tbody>
+    ${lista.map((p) => `<tr><td>${linkJogador(p.nome)}${mostrarGuild ? `<div class="sub-linha">${esc(p.guild)}</div>` : ""}</td>
+      <td class="centro">${vocHTML(p.voc)}</td><td class="num">${p.level}</td>
+      <td class="num" title="${dataBR(p[campoData])}">${dataCurta(p[campoData])}</td></tr>`).join("")}
   </tbody></table>`;
 }
 

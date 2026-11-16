@@ -300,6 +300,12 @@ td.pos { color: var(--texto-3); width: 2.75rem; }
 .legenda-nv .item i.nv-sim { background: color-mix(in srgb, var(--sobe) 35%, var(--superficie)); }
 .legenda-nv .item i.nv-nao { background: color-mix(in srgb, var(--desce) 25%, var(--superficie)); }
 
+/* Tabelas enxutas (entradas e saídas da guild) */
+table.compacta th, table.compacta td { padding: .5rem .45rem; }
+table.compacta td:first-child { white-space: normal; }  /* nome longo quebra linha em vez de rolar */
+@media (max-width: 600px) { table.compacta th, table.compacta td { padding: .45rem .3rem; } }
+.sub-linha { font-size: .75rem; color: var(--texto-3); margin-top: .1rem; white-space: nowrap; }
+
 /* Histórico do jogador: períodos sem registro no top 1000 */
 tr.sem-registro td { color: var(--texto-3); font-style: italic; background: color-mix(in srgb, var(--texto-3) 8%, transparent); }
 
