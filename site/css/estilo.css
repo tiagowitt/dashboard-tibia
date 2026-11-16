@@ -300,6 +300,9 @@ td.pos { color: var(--texto-3); width: 2.75rem; }
 .legenda-nv .item i.nv-sim { background: color-mix(in srgb, var(--sobe) 35%, var(--superficie)); }
 .legenda-nv .item i.nv-nao { background: color-mix(in srgb, var(--desce) 25%, var(--superficie)); }
 
+/* Histórico do jogador: períodos sem registro no top 1000 */
+tr.sem-registro td { color: var(--texto-3); font-style: italic; background: color-mix(in srgb, var(--texto-3) 8%, transparent); }
+
 /* Barra dentro da célula (listas de top) */
 .barra-celula { display: flex; align-items: center; gap: .6rem; min-width: 10rem; }
 .barra-celula .trilha { flex: 1; height: 6px; border-radius: 999px; background: var(--superficie-3); overflow: hidden; }

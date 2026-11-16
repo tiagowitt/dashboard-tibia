@@ -7,6 +7,36 @@ const ativos = new Set();
 Chart.defaults.font.family = getComputedStyle(document.body).fontFamily;
 Chart.defaults.font.size = 12;
 
+/**
+ * Faixas sombreadas atrás dos dias sem registro (personagem fora do top 1000 naquele dia).
+ * Uso: options.plugins.semRegistro = { dias: [true/false por rótulo do eixo x] }.
+ */
+Chart.register({
+  id: "semRegistro",
+  beforeDatasetsDraw(chart, _args, opcoes) {
+    const dias = opcoes?.dias;
+    if (!dias?.some(Boolean)) return;
+    const x = chart.scales.x, area = chart.chartArea, n = dias.length;
+    const meia = n > 1 ? Math.abs(x.getPixelForValue(1) - x.getPixelForValue(0)) / 2 : area.width / 2;
+    const { ctx } = chart;
+    ctx.save();
+    ctx.fillStyle = corSemRegistro();
+    for (let i = 0; i < n; i++) {
+      if (!dias[i]) continue;
+      let fim = i;
+      while (fim + 1 < n && dias[fim + 1]) fim++;  // junta dias seguidos numa faixa só
+      const esq = Math.max(area.left, x.getPixelForValue(i) - meia);
+      const dir = Math.min(area.right, x.getPixelForValue(fim) + meia);
+      ctx.fillRect(esq, area.top, dir - esq, area.bottom - area.top);
+      i = fim;
+    }
+    ctx.restore();
+  },
+});
+
+/** Cor da faixa "sem registro" (a mesma vai na legenda). */
+export const corSemRegistro = () => comAlfa(cor("--texto-3"), 0.16);
+
 function base() {
   return {
     responsive: true,

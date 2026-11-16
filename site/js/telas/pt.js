@@ -96,11 +96,9 @@ function desenharAnalise(corpo, r, membros, aoMudarMeta) {
     m.calc = m.meta > m.atual.level ? calcularMeta(m.atual, m.meta, r.data_ref) : null;
   }
 
-  const saiuDoTop = presentes.filter((m) => m.atual.data !== r.data_ref);
   corpo.innerHTML = `
     ${ausentes.length ? `<div class="aviso">Fora do top 1000 nos últimos 30 dias: ${ausentes.map((m) => esc(m.nome)).join(", ")}.</div>` : ""}
-    ${saiuDoTop.length ? `<div class="aviso">${saiuDoTop.map((m) => `${esc(m.atual.nome)} saiu do top 1000 depois de ${dataBR(m.atual.data)}`).join("; ")}.
-      Para ${saiuDoTop.length > 1 ? "eles" : "ele"}, a XP de ontem é 0 e as de 7 e 30 dias contam só o que foi feito até essa data.</div>` : ""}
+
     ${presentes.length ? `
     <div class="cartao">
       <div class="cartao-cab"><h2>Comparativo</h2><span class="muted">${dataBR(r.data_ref)}</span></div>
@@ -177,7 +175,7 @@ function tabelaComparativa(membros, r) {
   return `<table class="tabela-comparativa">
     <thead><tr><th></th>${membros.map((m) =>
       `<th class="num"><span class="ponto-serie" style="--cor:${corSerie(m.i)}"></span>${linkJogador(m.atual.nome)}
-        <div class="sub-cab">${vocHTML(m.atual.voc)}${m.atual.data !== r.data_ref ? ` <span class="var desce" title="Último dia no top 1000: ${dataBR(m.atual.data)}">fora do top</span>` : ""}</div></th>`).join("")}</tr></thead>
+        <div class="sub-cab">${vocHTML(m.atual.voc)}</div></th>`).join("")}</tr></thead>
     <tbody>${LINHAS_COMPARATIVO.map(([rotulo, celula]) => `<tr><th scope="row">${rotulo}</th>${membros.map((m) =>
       `<td class="num">${celula(m)}</td>`).join("")}</tr>`).join("")}
     </tbody></table>`;

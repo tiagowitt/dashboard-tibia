@@ -1,8 +1,8 @@
 // Tela 2 — Jogador: KPIs, gráficos de XP/level/posição, calculadora de meta e histórico.
 import * as dados from "../dados.js";
-import { barras, degrade, grafico, legendaHTML, linha, rotulosDatas } from "../graficos.js";
+import { barras, corSemRegistro, degrade, grafico, legendaHTML, linha, rotulosDatas } from "../graficos.js";
 import {
-  calcularMeta, compacto, cor, dataBR, esc, kpi, num, prefs, tituloTela, varRankHTML, vocHTML, NOMES_VOCACAO,
+  calcularMeta, compacto, cor, dataBR, esc, kpi, num, prefs, somarDias, tituloTela, varRankHTML, vocHTML, NOMES_VOCACAO,
 } from "../util.js";
 
 const PERIODOS = [[30, "30 dias"], [90, "90 dias"], [180, "180 dias"], [9999, "Tudo"]];
@@ -67,7 +67,6 @@ function desenharJogador(corpo, r, hist, situacao) {
     ? { ...ultimo, ...situacao }
     : { ...ultimo, xp_dia: 0, xp_7: 0, xp_30: 0, lv_30: 0, rank: null, var_rank: null };
   const guild = r.guild_de[atual.nome];
-  const foraDoTop = atual.data !== r.data_ref;
   const metaPadrao = r.pt_padrao.find((p) => p.nome === atual.nome)?.meta
     ?? Math.ceil((atual.level + 50) / 50) * 50;
   const metaSalva = prefs.ler(`meta.${atual.nome}`, metaPadrao);
@@ -81,15 +80,13 @@ function desenharJogador(corpo, r, hist, situacao) {
           ${guild ? `<span>· ${esc(guild)}</span>` : ""}<span>· último registro em ${dataBR(atual.data)}</span></p>
       </div>
     </div>
-    ${foraDoTop ? `<div class="aviso">Fora do top 1000 depois de ${dataBR(atual.data)}. Os indicadores são de ${dataBR(r.data_ref)}:
-      XP no dia 0 e XP de 7/30 dias só com o que foi feito até ${dataBR(atual.data)}. Level é o último conhecido.</div>` : ""}
     <div class="kpis">
       ${kpi("Level", atual.level, `${atual.lv_30 >= 0 ? "+" : ""}${atual.lv_30} em 30 dias`)}
       ${kpi("XP no dia", compacto(atual.xp_dia), num(atual.xp_dia))}
       ${kpi("XP 7 dias", compacto(atual.xp_7), num(atual.xp_7))}
       ${kpi("XP 30 dias", compacto(atual.xp_30), num(atual.xp_30), true)}
       ${kpi("Média diária (30d)", compacto(atual.xp_30 / 30), num(Math.round(atual.xp_30 / 30)))}
-      ${atual.rank == null ? kpi("Rank no highscore", "—", "fora do top 1000")
+      ${atual.rank == null ? kpi("Rank no highscore", "—", "sem registro no dia")
         : kpi("Rank no highscore", atual.rank, varRankHTML(atual.var_rank))}
     </div>
 
@@ -99,8 +96,8 @@ function desenharJogador(corpo, r, hist, situacao) {
       <div class="grafico" id="j-g-xp"></div>
     </div>
     <div class="grade-2">
-      <div class="cartao"><h2>Level</h2><div class="grafico" id="j-g-level"></div></div>
-      <div class="cartao"><h2>Posição no highscore</h2><div class="grafico" id="j-g-rank"></div></div>
+      <div class="cartao"><h2>Level</h2><div class="j-leg-sem"></div><div class="grafico" id="j-g-level"></div></div>
+      <div class="cartao"><h2>Posição no highscore</h2><div class="j-leg-sem"></div><div class="grafico" id="j-g-rank"></div></div>
     </div>
 
     <div class="cartao">
@@ -113,7 +110,7 @@ function desenharJogador(corpo, r, hist, situacao) {
 
     <div class="cartao">
       <h2>Histórico diário</h2>
-      <div class="tabela-rolagem">${tabelaHistorico(hist)}</div>
+      <div class="tabela-rolagem">${tabelaHistorico(hist, r.data_ref)}</div>
     </div>`;
 
   const kpiMeta = () => {
@@ -133,35 +130,65 @@ function desenharJogador(corpo, r, hist, situacao) {
   corpo.querySelector("#j-meta").addEventListener("input", kpiMeta);
   kpiMeta();
 
-  // Gráficos
-  const rotulos = rotulosDatas(hist.map((l) => l.data));
+  // Gráficos: eixo de calendário até a data de referência. Dia sem registro (fora do top 1000)
+  // fica vazio e sombreado, em vez de sumir do eixo.
+  const datas = diasEntreDatas(hist[0].data, r.data_ref);
+  const porData = new Map(hist.map((l) => [l.data, l]));
+  const valores = (f) => datas.map((d) => (porData.has(d) ? f(porData.get(d)) : null));
+  const semRegistro = datas.map((d) => !porData.has(d));
+  const temLacunas = semRegistro.some(Boolean);
+  const itemSem = ["Sem registro no top 1000", corSemRegistro()];
+  const rotulos = rotulosDatas(datas);
+  const extras = { plugins: { semRegistro: { dias: semRegistro } } };
   const cXp = cor("--s1"), cMedia = cor("--s2");
-  corpo.querySelector("#j-leg-xp").innerHTML = legendaHTML([["XP no dia", cXp], ["Média móvel 7 dias", cMedia]]);
+  corpo.querySelector("#j-leg-xp").innerHTML = legendaHTML(
+    [["XP no dia", cXp], ["Média móvel 7 dias", cMedia], ...(temLacunas ? [itemSem] : [])]);
+  if (temLacunas) corpo.querySelectorAll(".j-leg-sem").forEach((el) => (el.innerHTML = legendaHTML([itemSem], true)));
   grafico(corpo.querySelector("#j-g-xp"), "bar", {
     labels: rotulos,
     datasets: [
-      linha("Média móvel 7 dias", hist.map((l) => l.xp_7 / 7), cMedia, { order: 0 }),
-      barras("XP no dia", hist.map((l) => l.xp_dia), cXp, { order: 1 }),
+      linha("Média móvel 7 dias", valores((l) => l.xp_7 / 7), cMedia, { order: 0, spanGaps: false }),
+      barras("XP no dia", valores((l) => l.xp_dia), cXp, { order: 1 }),
     ],
-  });
+  }, extras);
   grafico(corpo.querySelector("#j-g-level"), "line", {
-    labels: rotulos, datasets: [linha("Level", hist.map((l) => l.level), cor("--s1"),
-      { tension: 0.2, fill: "origin", backgroundColor: degrade(cor("--s1")) })],
-  }, { scales: { y: { ticks: { callback: (v) => num(v) } } } });
+    labels: rotulos, datasets: [linha("Level", valores((l) => l.level), cor("--s1"),
+      { tension: 0.2, fill: "origin", backgroundColor: degrade(cor("--s1")), spanGaps: false })],
+  }, { ...extras, scales: { y: { ticks: { callback: (v) => num(v) } } } });
   grafico(corpo.querySelector("#j-g-rank"), "line", {
-    labels: rotulos, datasets: [linha("Rank", hist.map((l) => l.rank), cor("--s7"),
-      { tension: 0.2, fill: "end", backgroundColor: degrade(cor("--s7")) })],
-  }, { scales: { y: { reverse: true, ticks: { callback: (v) => num(v) } } } });
+    labels: rotulos, datasets: [linha("Rank", valores((l) => l.rank), cor("--s7"),
+      { tension: 0.2, fill: "end", backgroundColor: degrade(cor("--s7")), spanGaps: false })],
+  }, { ...extras, scales: { y: { reverse: true, ticks: { callback: (v) => num(v) } } } });
 }
 
-function tabelaHistorico(hist) {
-  return `<table>
-    <thead><tr><th class="centro">Data</th><th class="num">Level</th><th class="num">XP total</th><th class="num">XP no dia</th>
-      <th class="num">XP 7 dias</th><th class="num">XP 30 dias</th><th class="num">Rank</th><th class="num">Variação</th></tr></thead>
-    <tbody>${[...hist].reverse().map((l) => `<tr>
+/** Todas as datas (AAAA-MM-DD) de `ini` a `fim`, inclusive. */
+function diasEntreDatas(ini, fim) {
+  const datas = [];
+  for (let d = ini; d <= fim; d = somarDias(d, 1)) datas.push(d);
+  return datas;
+}
+
+// Mais recente primeiro; cada período sem registro (inclusive o final, até a data de
+// referência) aparece como uma linha própria, para não parecer que os dias são seguidos.
+function tabelaHistorico(hist, dataRef) {
+  const linhaSemRegistro = (de, ate) => {
+    const n = diasEntreDatas(de, ate).length;
+    const periodo = de === ate ? dataBR(de) : `${dataBR(de)} a ${dataBR(ate)}`;
+    return `<tr class="sem-registro"><td class="centro" colspan="8">Sem registro no top 1000 · ${periodo} (${n} ${n > 1 ? "dias" : "dia"})</td></tr>`;
+  };
+  const linhas = [];
+  let depois = somarDias(dataRef, 1);  // dia seguinte ao mais recente já listado
+  for (const l of [...hist].reverse()) {
+    if (somarDias(l.data, 1) < depois) linhas.push(linhaSemRegistro(somarDias(l.data, 1), somarDias(depois, -1)));
+    linhas.push(`<tr>
       <td class="centro">${dataBR(l.data)}</td><td class="num">${l.level}</td>
       <td class="num">${num(l.xp)}</td>
       <td class="num">${num(l.xp_dia)}</td><td class="num">${num(l.xp_7)}</td><td class="num">${num(l.xp_30)}</td>
-      <td class="num">${l.rank}</td><td class="num">${varRankHTML(l.var_rank)}</td></tr>`).join("")}
-    </tbody></table>`;
+      <td class="num">${l.rank}</td><td class="num">${varRankHTML(l.var_rank)}</td></tr>`);
+    depois = l.data;
+  }
+  return `<table>
+    <thead><tr><th class="centro">Data</th><th class="num">Level</th><th class="num">XP total</th><th class="num">XP no dia</th>
+      <th class="num">XP 7 dias</th><th class="num">XP 30 dias</th><th class="num">Rank</th><th class="num">Variação</th></tr></thead>
+    <tbody>${linhas.join("")}</tbody></table>`;
 }
