@@ -41,8 +41,9 @@ export async function telaJogador(el, r, nomeRota) {
     }
     const diasSel = +$("#j-dias").value;
     corpo.innerHTML = `<div class="carregando"><span></span><span></span></div>`;
-    const linhas = (await dados.variosMeses(dados.mesesDosUltimosDias(r, diasSel)))
-      .filter((l) => l.nome.toLowerCase() === nome.toLowerCase());
+    const [meses, situacao] = await Promise.all([
+      dados.variosMeses(dados.mesesDosUltimosDias(r, diasSel)), dados.atual()]);
+    const linhas = meses.filter((l) => l.nome.toLowerCase() === nome.toLowerCase());
     const inicio = new Date(r.data_ref + "T00:00:00Z");
     inicio.setUTCDate(inicio.getUTCDate() - diasSel + 1);
     const hist = linhas.filter((l) => l.data >= inicio.toISOString().slice(0, 10));
@@ -52,14 +53,19 @@ export async function telaJogador(el, r, nomeRota) {
       return;
     }
     prefs.gravar("jogador.ultimo", hist[0].nome);
-    desenharJogador(corpo, r, hist);
+    desenharJogador(corpo, r, hist, situacao.get(nome.toLowerCase()));
   }
 
   await desenhar();
 }
 
-function desenharJogador(corpo, r, hist) {
-  const atual = hist.at(-1);
+// Indicadores sempre na data de referência: quem saiu do top tem XP do dia 0 e janelas de
+// 7/30 dias que só somam o que caiu nelas (atual.json). Sem registro nos últimos 30 dias, tudo 0.
+function desenharJogador(corpo, r, hist, situacao) {
+  const ultimo = hist.at(-1);
+  const atual = situacao
+    ? { ...ultimo, ...situacao }
+    : { ...ultimo, xp_dia: 0, xp_7: 0, xp_30: 0, lv_30: 0, rank: null, var_rank: null };
   const guild = r.guild_de[atual.nome];
   const foraDoTop = atual.data !== r.data_ref;
   const metaPadrao = r.pt_padrao.find((p) => p.nome === atual.nome)?.meta
@@ -75,14 +81,16 @@ function desenharJogador(corpo, r, hist) {
           ${guild ? `<span>· ${esc(guild)}</span>` : ""}<span>· último registro em ${dataBR(atual.data)}</span></p>
       </div>
     </div>
-    ${foraDoTop ? `<div class="aviso">Fora do top 1000 desde ${dataBR(atual.data)}; os números abaixo são do último dia em que apareceu.</div>` : ""}
+    ${foraDoTop ? `<div class="aviso">Fora do top 1000 depois de ${dataBR(atual.data)}. Os indicadores são de ${dataBR(r.data_ref)}:
+      XP no dia 0 e XP de 7/30 dias só com o que foi feito até ${dataBR(atual.data)}. Level é o último conhecido.</div>` : ""}
     <div class="kpis">
       ${kpi("Level", atual.level, `${atual.lv_30 >= 0 ? "+" : ""}${atual.lv_30} em 30 dias`)}
       ${kpi("XP no dia", compacto(atual.xp_dia), num(atual.xp_dia))}
       ${kpi("XP 7 dias", compacto(atual.xp_7), num(atual.xp_7))}
       ${kpi("XP 30 dias", compacto(atual.xp_30), num(atual.xp_30), true)}
       ${kpi("Média diária (30d)", compacto(atual.xp_30 / 30), num(Math.round(atual.xp_30 / 30)))}
-      ${kpi("Rank no highscore", atual.rank, varRankHTML(atual.var_rank))}
+      ${atual.rank == null ? kpi("Rank no highscore", "—", "fora do top 1000")
+        : kpi("Rank no highscore", atual.rank, varRankHTML(atual.var_rank))}
     </div>
 
     <div class="cartao">

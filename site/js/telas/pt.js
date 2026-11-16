@@ -65,10 +65,12 @@ export async function telaPT(el, r) {
 
   async function analisar() {
     prefs.gravar("pt.lista", lista);
-    const hist = await dados.variosMeses(dados.mesesDosUltimosDias(r, 31));
+    const [hist, situacao] = await Promise.all([
+      dados.variosMeses(dados.mesesDosUltimosDias(r, 31)), dados.atual()]);
     const membros = lista.map((p, i) => {
       const linhas = hist.filter((l) => l.nome.toLowerCase() === p.nome.toLowerCase());
-      return { ...p, i, linhas, atual: linhas.at(-1) };
+      // Números na data de referência (não os do último dia em que o personagem apareceu).
+      return { ...p, i, linhas, atual: situacao.get(p.nome.toLowerCase()) };
     });
     desenharAnalise($("#pt-corpo"), r, membros, (i, meta) => {
       lista[i].meta = meta;
@@ -94,8 +96,11 @@ function desenharAnalise(corpo, r, membros, aoMudarMeta) {
     m.calc = m.meta > m.atual.level ? calcularMeta(m.atual, m.meta, r.data_ref) : null;
   }
 
+  const saiuDoTop = presentes.filter((m) => m.atual.data !== r.data_ref);
   corpo.innerHTML = `
     ${ausentes.length ? `<div class="aviso">Fora do top 1000 nos últimos 30 dias: ${ausentes.map((m) => esc(m.nome)).join(", ")}.</div>` : ""}
+    ${saiuDoTop.length ? `<div class="aviso">${saiuDoTop.map((m) => `${esc(m.atual.nome)} saiu do top 1000 depois de ${dataBR(m.atual.data)}`).join("; ")}.
+      Para ${saiuDoTop.length > 1 ? "eles" : "ele"}, a XP de ontem é 0 e as de 7 e 30 dias contam só o que foi feito até essa data.</div>` : ""}
     ${presentes.length ? `
     <div class="cartao">
       <div class="cartao-cab"><h2>Comparativo</h2><span class="muted">${dataBR(r.data_ref)}</span></div>
@@ -168,11 +173,11 @@ const valor = (v) => num(Math.round(v));
 const fmtPct2 = new Intl.NumberFormat("pt-BR", { style: "percent", minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const pct2 = (v) => fmtPct2.format(v);
 
-function tabelaComparativa(membros) {
+function tabelaComparativa(membros, r) {
   return `<table class="tabela-comparativa">
     <thead><tr><th></th>${membros.map((m) =>
       `<th class="num"><span class="ponto-serie" style="--cor:${corSerie(m.i)}"></span>${linkJogador(m.atual.nome)}
-        <div class="sub-cab">${vocHTML(m.atual.voc)}</div></th>`).join("")}</tr></thead>
+        <div class="sub-cab">${vocHTML(m.atual.voc)}${m.atual.data !== r.data_ref ? ` <span class="var desce" title="Último dia no top 1000: ${dataBR(m.atual.data)}">fora do top</span>` : ""}</div></th>`).join("")}</tr></thead>
     <tbody>${LINHAS_COMPARATIVO.map(([rotulo, celula]) => `<tr><th scope="row">${rotulo}</th>${membros.map((m) =>
       `<td class="num">${celula(m)}</td>`).join("")}</tr>`).join("")}
     </tbody></table>`;

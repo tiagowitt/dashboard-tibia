@@ -91,6 +91,43 @@ def calcular_historico(ranking: pd.DataFrame, dias_troca_de_dono: int) -> pd.Dat
     return df.rename(columns={"name": "nome", "value": "xp"})
 
 
+COLUNAS_ATUAL = ["nome", "voc", "level", "xp", "visto_em", "xp_dia", "xp_7", "xp_30", "lv_30", "rank", "var_rank"]
+
+
+def situacao_atual(hist: pd.DataFrame, ultima: pd.Timestamp) -> pd.DataFrame:
+    """Situação de cada nome visto nos últimos 30 dias, calculada NA data de referência `ultima`.
+
+    Quem não aparece no último dia (saiu do top 1000, trocou de nome...) não pode carregar os
+    números do último dia em que apareceu: XP do dia = 0 e as janelas de 7/30 dias somam só o
+    que caiu dentro delas, na sessão atual do nome. Level e XP total são os últimos conhecidos.
+    """
+    ini_30 = ultima - pd.Timedelta(days=29)
+    ini_7 = ultima - pd.Timedelta(days=6)
+    ultimo = hist.groupby("nome").tail(1)
+    ultimo = ultimo[ultimo["data_ref"] >= ini_30].set_index("nome")
+
+    # Linhas da sessão atual de cada nome dentro da janela de 30 dias.
+    janela = hist[hist["data_ref"] >= ini_30].merge(
+        ultimo[["sessao"]].reset_index(), on=["nome", "sessao"])
+    soma_30 = janela.groupby("nome")[["xp_dia", "lv_dia"]].sum()
+    soma_7 = janela[janela["data_ref"] >= ini_7].groupby("nome")["xp_dia"].sum()
+
+    presente = ultimo["data_ref"] == ultima
+    atual = pd.DataFrame({
+        "voc": ultimo["voc"],
+        "level": ultimo["level"],
+        "xp": ultimo["xp"],
+        "visto_em": ultimo["data_ref"],
+        "xp_dia": ultimo["xp_dia"].where(presente, 0),
+        "xp_7": soma_7.reindex(ultimo.index).fillna(0).astype("int64"),
+        "xp_30": soma_30["xp_dia"].reindex(ultimo.index).fillna(0).astype("int64"),
+        "lv_30": soma_30["lv_dia"].reindex(ultimo.index).fillna(0).astype("int64"),
+        "rank": ultimo["rank"].where(presente).astype("Int64"),
+        "var_rank": ultimo["var_rank"].where(presente).astype("Int64"),
+    })
+    return atual.reset_index().sort_values("nome")
+
+
 def medias_por_faixa(hist_dia: pd.DataFrame, membros: pd.DataFrame, cfg: dict) -> dict:
     """Média da XP 30 dias por faixa, só com membros que estão no top 1000 no último dia."""
     base = hist_dia.merge(membros[["character_name", "guild_name"]],
@@ -236,6 +273,13 @@ def gerar_mundo(pasta_mundo: Path, saida_mundo: Path, cfg: dict, mundo: dict,
     ultima = hist["data_ref"].max()
     hist_dia = hist[hist["data_ref"] == ultima]
     print(f"  {mundo['nome']} historico: {len(hist)} linhas em {len(meses)} meses (último dia {ultima:%Y-%m-%d})")
+
+    atual = situacao_atual(hist, ultima)
+    atual["visto_em"] = atual["visto_em"].dt.strftime("%Y-%m-%d")
+    _gravar_json({"data": ultima.strftime("%Y-%m-%d"), "colunas": COLUNAS_ATUAL,
+                  "linhas": _linhas(atual, COLUNAS_ATUAL)}, saida_mundo / "atual.json")
+    print(f"  {mundo['nome']} atual: {len(atual)} nomes vistos nos últimos 30 dias "
+          f"({int((atual['visto_em'] < ultima.strftime('%Y-%m-%d')).sum())} fora do top no último dia)")
 
     dados_guild, atuais = gerar_guild(ler_conjunto("guild", pasta_mundo), hist_dia, cfg)
     _gravar_json(dados_guild, saida_mundo / "guild.json")

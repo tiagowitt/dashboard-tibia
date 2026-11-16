@@ -3,7 +3,7 @@ from datetime import date, timedelta
 import pandas as pd
 import pytest
 
-from coletor.agregados import calcular_historico, faixa_do_level, faixas_de_level
+from coletor.agregados import calcular_historico, faixa_do_level, faixas_de_level, situacao_atual
 from coletor.config import carregar_config
 
 INICIO = date(2026, 10, 1)
@@ -81,3 +81,30 @@ def test_lista_de_faixas():
     assert faixas[0] == "2 - 199" and faixas[1] == "200 - 299"
     assert faixas[-2:] == ["1900 - 1999", "2000+"]
     assert len(faixas) == 20
+
+
+def test_situacao_atual_de_quem_saiu_do_top():
+    # "A" ganha 100 por dia do dia 1 ao 10 e some; "B" continua até o dia 20.
+    aparicoes = [("A", d, 1000 + 100 * d, 1, 100 + d) for d in range(1, 11)]
+    aparicoes += [("B", d, 5000 + 10 * d, 2, 300) for d in range(1, 21)]
+    hist = calcular_historico(_ranking(aparicoes), 10)
+    ultima = hist["data_ref"].max()  # referência do dia 20
+    atual = situacao_atual(hist, ultima).set_index("nome")
+
+    a = atual.loc["A"]
+    assert a["xp_dia"] == 0           # não apareceu no último dia: não fez XP "ontem"
+    assert a["xp_7"] == 0             # dias 14 a 20: nenhuma aparição
+    assert a["xp_30"] == 900          # dias 2 a 10 continuam dentro dos 30 dias
+    assert a["lv_30"] == 9
+    assert pd.isna(a["rank"])         # fora do top
+    assert a["level"] == 110 and a["xp"] == 2000  # últimos conhecidos
+
+    b = atual.loc["B"]
+    assert b["xp_dia"] == 10 and b["xp_7"] == 70 and b["rank"] == 2
+
+
+def test_situacao_atual_ignora_quem_sumiu_ha_mais_de_30_dias():
+    aparicoes = [("A", d, 1000 + d, 1, 100) for d in range(1, 3)]
+    aparicoes += [("B", d, 5000 + d, 2, 300) for d in range(1, 41)]
+    hist = calcular_historico(_ranking(aparicoes), 10)
+    assert set(situacao_atual(hist, hist["data_ref"].max())["nome"]) == {"B"}

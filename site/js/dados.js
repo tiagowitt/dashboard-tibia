@@ -31,6 +31,21 @@ export const resumo = () => doMundo("resumo.json");
 export const guild = () => doMundo("guild.json");
 export const kills = () => doMundo("kills.json");
 
+/**
+ * Situação de cada personagem visto nos últimos 30 dias, calculada na data de referência
+ * (quem saiu do top tem XP do dia 0 e janelas de 7/30 dias que só somam o que caiu nelas).
+ * Mapa nome em minúsculas → linha; `data` = último dia em que apareceu.
+ */
+const atuais = new Map();
+export async function atual() {
+  const chave = contexto.mundo;
+  if (!atuais.has(chave)) {
+    atuais.set(chave, doMundo("atual.json").then((t) =>
+      new Map(tabela(t).map((l) => [l.nome.toLowerCase(), { ...l, data: l.visto_em }]))));
+  }
+  return atuais.get(chave);
+}
+
 /** Linhas do histórico de um mês (AAAA-MM) do mundo atual, já como objetos. */
 const meses = new Map();
 export async function mes(m) {
