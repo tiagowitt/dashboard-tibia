@@ -1,6 +1,6 @@
 // Tela 2 — Jogador: KPIs, gráficos de XP/level/posição, calculadora de meta e histórico.
 import * as dados from "../dados.js";
-import { barras, corSemRegistro, degrade, grafico, legendaHTML, linha, rotulosDatas } from "../graficos.js";
+import { barras, degrade, grafico, legendaHTML, linha, rotulosDatas } from "../graficos.js";
 import {
   calcularMeta, compacto, cor, dataBR, esc, kpi, num, prefs, somarDias, tituloTela, varRankHTML, vocHTML, NOMES_VOCACAO,
 } from "../util.js";
@@ -96,8 +96,8 @@ function desenharJogador(corpo, r, hist, situacao) {
       <div class="grafico" id="j-g-xp"></div>
     </div>
     <div class="grade-2">
-      <div class="cartao"><h2>Level</h2><div class="j-leg-sem"></div><div class="grafico" id="j-g-level"></div></div>
-      <div class="cartao"><h2>Posição no highscore</h2><div class="j-leg-sem"></div><div class="grafico" id="j-g-rank"></div></div>
+      <div class="cartao"><h2>Level</h2><div class="grafico" id="j-g-level"></div></div>
+      <div class="cartao"><h2>Posição no highscore</h2><div class="grafico" id="j-g-rank"></div></div>
     </div>
 
     <div class="cartao">
@@ -130,35 +130,47 @@ function desenharJogador(corpo, r, hist, situacao) {
   corpo.querySelector("#j-meta").addEventListener("input", kpiMeta);
   kpiMeta();
 
-  // Gráficos: eixo de calendário até a data de referência. Dia sem registro (fora do top 1000)
-  // fica vazio e sombreado, em vez de sumir do eixo.
+  // Gráficos: eixo de calendário até a data de referência. Dia sem registro no top 1000 conta
+  // como XP 0 (e entra assim na média móvel); o level repete o último conhecido; a posição fica vazia.
   const datas = diasEntreDatas(hist[0].data, r.data_ref);
   const porData = new Map(hist.map((l) => [l.data, l]));
-  const valores = (f) => datas.map((d) => (porData.has(d) ? f(porData.get(d)) : null));
-  const semRegistro = datas.map((d) => !porData.has(d));
-  const temLacunas = semRegistro.some(Boolean);
-  const itemSem = ["Sem registro no top 1000", corSemRegistro()];
+  const xpDia = datas.map((d) => porData.get(d)?.xp_dia ?? 0);
   const rotulos = rotulosDatas(datas);
-  const extras = { plugins: { semRegistro: { dias: semRegistro } } };
+  let ultimoLevel = null;
+  const levels = datas.map((d) => (ultimoLevel = porData.get(d)?.level ?? ultimoLevel));
   const cXp = cor("--s1"), cMedia = cor("--s2");
-  corpo.querySelector("#j-leg-xp").innerHTML = legendaHTML(
-    [["XP no dia", cXp], ["Média móvel 7 dias", cMedia], ...(temLacunas ? [itemSem] : [])]);
-  if (temLacunas) corpo.querySelectorAll(".j-leg-sem").forEach((el) => (el.innerHTML = legendaHTML([itemSem], true)));
+  corpo.querySelector("#j-leg-xp").innerHTML = legendaHTML([["XP no dia", cXp], ["Média móvel 7 dias", cMedia]]);
   grafico(corpo.querySelector("#j-g-xp"), "bar", {
     labels: rotulos,
     datasets: [
-      linha("Média móvel 7 dias", valores((l) => l.xp_7 / 7), cMedia, { order: 0, spanGaps: false }),
-      barras("XP no dia", valores((l) => l.xp_dia), cXp, { order: 1 }),
+      linha("Média móvel 7 dias", mediaMovel7(datas, porData, xpDia), cMedia, { order: 0 }),
+      barras("XP no dia", xpDia, cXp, { order: 1 }),
     ],
-  }, extras);
+  });
   grafico(corpo.querySelector("#j-g-level"), "line", {
-    labels: rotulos, datasets: [linha("Level", valores((l) => l.level), cor("--s1"),
-      { tension: 0.2, fill: "origin", backgroundColor: degrade(cor("--s1")), spanGaps: false })],
-  }, { ...extras, scales: { y: { ticks: { callback: (v) => num(v) } } } });
+    labels: rotulos, datasets: [linha("Level", levels, cor("--s1"),
+      { tension: 0.2, fill: "origin", backgroundColor: degrade(cor("--s1")) })],
+  }, { scales: { y: { ticks: { callback: (v) => num(v) } } } });
   grafico(corpo.querySelector("#j-g-rank"), "line", {
-    labels: rotulos, datasets: [linha("Rank", valores((l) => l.rank), cor("--s7"),
+    labels: rotulos, datasets: [linha("Rank", datas.map((d) => porData.get(d)?.rank ?? null), cor("--s7"),
       { tension: 0.2, fill: "end", backgroundColor: degrade(cor("--s7")), spanGaps: false })],
-  }, { ...extras, scales: { y: { reverse: true, ticks: { callback: (v) => num(v) } } } });
+  }, { scales: { y: { reverse: true, ticks: { callback: (v) => num(v) } } } });
+}
+
+/**
+ * Média dos últimos 7 dias de calendário, com XP 0 nos dias sem registro.
+ * Não mistura sessões: o início de uma sessão nova (troca de dono: 1ª aparição, sem variação
+ * de rank) zera a janela, como no cálculo da XP 7 dias dos agregados.
+ */
+function mediaMovel7(datas, porData, xpDia) {
+  let inicioSessao = 0;
+  return datas.map((d, i) => {
+    const l = porData.get(d);
+    if (l && l.var_rank == null && l.xp_dia === 0) inicioSessao = i;
+    let soma = 0;
+    for (let j = Math.max(i - 6, inicioSessao); j <= i; j++) soma += xpDia[j];
+    return soma / 7;
+  });
 }
 
 /** Todas as datas (AAAA-MM-DD) de `ini` a `fim`, inclusive. */
