@@ -28,7 +28,8 @@ function base() {
         titleFont: { weight: "600" },
         usePointStyle: true,
         callbacks: {
-          label: (c) => ` ${c.dataset.label}: ${num(Math.round(c.parsed.y ?? c.parsed.x))}`,
+          // Em gráfico horizontal (indexAxis "y") o valor está em x; parsed.y seria o índice da categoria.
+          label: (c) => ` ${c.dataset.label}: ${num(Math.round(c.chart.options.indexAxis === "y" ? c.parsed.x : c.parsed.y))}`,
         },
       },
     },
