@@ -245,10 +245,11 @@ def gerar_kills(kills: pd.DataFrame, bosses: dict) -> dict:
     k["data"] = pd.to_datetime(k["extraction_date"]) - pd.Timedelta(days=1)
     ultima = k["data"].max()
 
-    def top(coluna: str, dias: int, n: int) -> list:
+    def top(coluna: str, dias: int) -> list:
+        # Todas as criaturas com pelo menos 1 morte no período (o site rola a lista).
         janela = k[k["data"] > ultima - pd.Timedelta(days=dias)]
         soma = janela.groupby("race")[coluna].sum()
-        soma = soma[soma > 0].sort_values(ascending=False).head(n)
+        soma = soma[soma > 0].sort_values(ascending=False)
         return [[raca, int(v)] for raca, v in soma.items()]
 
     tipo_boss = {nome.lower(): tipo for nome, tipo in bosses.items()}
@@ -268,8 +269,8 @@ def gerar_kills(kills: pd.DataFrame, bosses: dict) -> dict:
 
     return {
         "data": ultima.strftime("%Y-%m-%d"),
-        "criaturas": {str(d): top("last_day_killed", d, 50) for d in (1, 7, 30)},
-        "matadores": {str(d): top("last_day_players_killed", d, 30) for d in (1, 7, 30)},
+        "criaturas": {str(d): top("last_day_killed", d) for d in (1, 7, 30)},
+        "matadores": {str(d): top("last_day_players_killed", d) for d in (1, 7, 30)},
         "bosses": {"colunas": ["boss", "tipo", "mortes"],
                    "periodos": {str(d): bosses_no_periodo(d) for d in (1, 7, 30)}},
         "nemesis_historico": {"colunas": ["data", "boss", "mortes"],

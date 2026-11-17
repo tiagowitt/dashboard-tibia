@@ -209,8 +209,10 @@ export async function telaGuild(el, r) {
 
     $("#k-corpo").innerHTML = `
       <div class="grade-2">
-        <div class="cartao"><h2>Criaturas mais mortas</h2>${listaTop(k.criaturas[p].slice(0, 20), "Criatura", "Mortas", true)}</div>
-        <div class="cartao"><h2>Quem mais matou jogadores</h2>${listaTop(k.matadores[p].slice(0, 20), "Criatura", "Jogadores mortos", true)}</div>
+        <div class="cartao"><div class="cartao-cab"><h2>Criaturas mais mortas</h2><span class="muted">${num(k.criaturas[p].length)} criaturas</span></div>
+          <div class="tabela-rolagem" style="max-height:480px">${listaTop(k.criaturas[p], "Criatura", "Mortas", true)}</div></div>
+        <div class="cartao"><div class="cartao-cab"><h2>Quem mais matou jogadores</h2><span class="muted">${num(k.matadores[p].length)} criaturas</span></div>
+          <div class="tabela-rolagem" style="max-height:480px">${listaTop(k.matadores[p], "Criatura", "Jogadores mortos", true)}</div></div>
       </div>
       <div class="grade-2">
         ${["Nemesis", "Archfoe", "Bane"].map((t) => {
@@ -241,7 +243,7 @@ function rotuloCategoria(valor) {
 function listaTop(itens, rotNome, rotValor, capitalizar = false) {
   if (!itens.length) return `<p class="vazio">Nenhum registro no período.</p>`;
   const maximo = Math.max(...itens.map(([, v]) => v));
-  return `<table><thead><tr><th class="num">#</th><th>${rotNome}</th><th>${rotValor}</th></tr></thead><tbody>
+  return `<table class="compacta"><thead><tr><th class="num">#</th><th>${rotNome}</th><th>${rotValor}</th></tr></thead><tbody>
     ${itens.map(([nome, v], i) => `<tr><td class="pos num">${i + 1}</td><td${capitalizar ? ' class="capitalizar"' : ""}>${esc(nome)}</td>
       <td style="width:45%">${barraHTML(v, maximo)}</td></tr>`).join("")}
   </tbody></table>`;

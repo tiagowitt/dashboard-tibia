@@ -303,6 +303,8 @@ td.pos { color: var(--texto-3); width: 2.75rem; }
 /* Tabelas enxutas (entradas e saídas da guild) */
 table.compacta th, table.compacta td { padding: .5rem .45rem; }
 table.compacta td:first-child { white-space: normal; }  /* nome longo quebra linha em vez de rolar */
+table.compacta td:nth-child(2) { white-space: normal; }  /* listas de top: o nome é a 2ª coluna */
+table.compacta .barra-celula { min-width: 7rem; }
 @media (max-width: 600px) { table.compacta th, table.compacta td { padding: .45rem .3rem; } }
 .sub-linha { font-size: .75rem; color: var(--texto-3); margin-top: .1rem; white-space: nowrap; }
 
