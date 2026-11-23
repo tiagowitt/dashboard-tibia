@@ -43,8 +43,8 @@ export async function telaJogador(el, r, nomeRota) {
     }
     const diasSel = +$("#j-dias").value;
     corpo.innerHTML = `<div class="carregando"><span></span><span></span></div>`;
-    const [meses, situacao] = await Promise.all([
-      dados.variosMeses(dados.mesesDosUltimosDias(r, diasSel)), dados.atual()]);
+    const [meses, situacao, trocas] = await Promise.all([
+      dados.variosMeses(dados.mesesDosUltimosDias(r, diasSel)), dados.atual(), dados.trocas()]);
     const linhas = meses.filter((l) => l.nome.toLowerCase() === nome.toLowerCase());
     const inicio = new Date(r.data_ref + "T00:00:00Z");
     inicio.setUTCDate(inicio.getUTCDate() - diasSel + 1);
@@ -55,7 +55,8 @@ export async function telaJogador(el, r, nomeRota) {
       return;
     }
     prefs.gravar("jogador.ultimo", hist[0].nome);
-    desenharJogador(corpo, r, hist, situacao.get(nome.toLowerCase()));
+    const minhasTrocas = trocas.filter((t) => t.atual.toLowerCase() === nome.toLowerCase());
+    desenharJogador(corpo, r, hist, situacao.get(nome.toLowerCase()), minhasTrocas);
   }
 
   await desenhar();
@@ -63,7 +64,7 @@ export async function telaJogador(el, r, nomeRota) {
 
 // Indicadores sempre na data de referência: quem saiu do top tem XP do dia 0 e janelas de
 // 7/30 dias que só somam o que caiu nelas (atual.json). Sem registro nos últimos 30 dias, tudo 0.
-function desenharJogador(corpo, r, hist, situacao) {
+function desenharJogador(corpo, r, hist, situacao, trocas = []) {
   const ultimo = hist.at(-1);
   const atual = situacao
     ? { ...ultimo, ...situacao }
@@ -80,6 +81,7 @@ function desenharJogador(corpo, r, hist, situacao) {
         <h1>${esc(atual.nome)}</h1>
         <p>${vocHTML(atual.voc)} <span>${NOMES_VOCACAO[atual.voc] ?? ""}</span>
           ${guild ? `<span>· ${esc(guild)}</span>` : ""}<span>· último registro em ${dataBR(atual.data)}</span></p>
+        ${trocas.length ? `<p class="muted">Nomes anteriores: ${[...new Set(trocas.map((t) => t.antigo))].map(esc).join(", ")}</p>` : ""}
       </div>
     </div>
     <div class="kpis">
@@ -109,6 +111,11 @@ function desenharJogador(corpo, r, hist, situacao) {
       </div>
       <div class="kpis" id="j-meta-res" style="margin-bottom:0"></div>
     </div>
+
+    ${trocas.length ? `<div class="cartao">
+      <div class="cartao-cab"><h2>Histórico de nomes</h2><span class="muted">${trocas.length} ${trocas.length > 1 ? "trocas" : "troca"} de nick</span></div>
+      <div class="tabela-rolagem">${tabelaNomes(trocas)}</div>
+    </div>` : ""}
 
     <div class="cartao">
       <h2>Histórico diário</h2>
@@ -180,6 +187,19 @@ function diasEntreDatas(ini, fim) {
   const datas = [];
   for (let d = ini; d <= fim; d = somarDias(d, 1)) datas.push(d);
   return datas;
+}
+
+// Trocas de nick do personagem, a mais recente primeiro. A troca aconteceu entre o último dia
+// com o nome antigo e o primeiro com o novo (datas de referência, como no resto do painel).
+function tabelaNomes(trocas) {
+  return `<table class="compacta">
+    <thead><tr><th class="centro">Data</th><th>Nome antigo</th><th>Nome novo</th>
+      <th class="centro">Último dia como antigo</th><th class="centro">Primeiro dia como novo</th></tr></thead>
+    <tbody>${[...trocas].sort((a, b) => (b.data ?? "").localeCompare(a.data ?? "")).map((t) => `<tr>
+      <td class="centro">${dataBR(t.data)}</td><td class="muted">${esc(t.antigo)}</td><td><strong>${esc(t.novo)}</strong></td>
+      <td class="centro">${t.ultimo_antigo ? dataBR(t.ultimo_antigo) : "—"}</td>
+      <td class="centro">${t.primeiro_novo ? dataBR(t.primeiro_novo) : "—"}</td></tr>`).join("")}
+    </tbody></table>`;
 }
 
 // Mais recente primeiro; cada período sem registro (inclusive o final, até a data de
