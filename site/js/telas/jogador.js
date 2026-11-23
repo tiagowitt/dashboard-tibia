@@ -81,7 +81,9 @@ function desenharJogador(corpo, r, hist, situacao, trocas = []) {
         <h1>${esc(atual.nome)}</h1>
         <p>${vocHTML(atual.voc)} <span>${NOMES_VOCACAO[atual.voc] ?? ""}</span>
           ${guild ? `<span>· ${esc(guild)}</span>` : ""}<span>· último registro em ${dataBR(atual.data)}</span></p>
-        ${trocas.length ? `<p class="muted">Nomes anteriores: ${[...new Set(trocas.map((t) => t.antigo))].map(esc).join(", ")}</p>` : ""}
+        ${trocas.length ? `<p class="muted">Nomes anteriores: ${[...trocas]
+          .sort((a, b) => (b.data ?? "").localeCompare(a.data ?? ""))
+          .map((t) => `${esc(t.antigo)}${t.ultimo_antigo ? ` - ${dataBR(t.ultimo_antigo)}` : ""}`).join(" · ")}</p>` : ""}
       </div>
     </div>
     <div class="kpis">
@@ -111,11 +113,6 @@ function desenharJogador(corpo, r, hist, situacao, trocas = []) {
       </div>
       <div class="kpis" id="j-meta-res" style="margin-bottom:0"></div>
     </div>
-
-    ${trocas.length ? `<div class="cartao">
-      <div class="cartao-cab"><h2>Histórico de nomes</h2><span class="muted">${trocas.length} ${trocas.length > 1 ? "trocas" : "troca"} de nick</span></div>
-      <div class="tabela-rolagem">${tabelaNomes(trocas)}</div>
-    </div>` : ""}
 
     <div class="cartao">
       <h2>Histórico diário</h2>
@@ -187,19 +184,6 @@ function diasEntreDatas(ini, fim) {
   const datas = [];
   for (let d = ini; d <= fim; d = somarDias(d, 1)) datas.push(d);
   return datas;
-}
-
-// Trocas de nick do personagem, a mais recente primeiro. A troca aconteceu entre o último dia
-// com o nome antigo e o primeiro com o novo (datas de referência, como no resto do painel).
-function tabelaNomes(trocas) {
-  return `<table class="compacta">
-    <thead><tr><th class="centro">Data</th><th>Nome antigo</th><th>Nome novo</th>
-      <th class="centro">Último dia como antigo</th><th class="centro">Primeiro dia como novo</th></tr></thead>
-    <tbody>${[...trocas].sort((a, b) => (b.data ?? "").localeCompare(a.data ?? "")).map((t) => `<tr>
-      <td class="centro">${dataBR(t.data)}</td><td class="muted">${esc(t.antigo)}</td><td><strong>${esc(t.novo)}</strong></td>
-      <td class="centro">${t.ultimo_antigo ? dataBR(t.ultimo_antigo) : "—"}</td>
-      <td class="centro">${t.primeiro_novo ? dataBR(t.primeiro_novo) : "—"}</td></tr>`).join("")}
-    </tbody></table>`;
 }
 
 // Mais recente primeiro; cada período sem registro (inclusive o final, até a data de
